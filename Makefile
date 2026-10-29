@@ -3,8 +3,8 @@ SHELL := /bin/bash
 FINERACT_IMAGE ?= fineract-custom:local
 BUILD_LOG ?= evidence/build-fineract.log
 DOCKER_BUILD_FLAGS ?=
-# Fineract clone used to produce the patches; lives outside this repository.
-FINERACT_SRC ?= ../fineract
+# Fineract clone used to produce the patches; gitignored, never committed.
+FINERACT_SRC ?= fineract-src
 FINERACT_TAG := $(shell sed -n 's/^ARG FINERACT_TAG=//p' fineract-customization/Dockerfile)
 PATCH_DIR := $(CURDIR)/fineract-customization/patch
 

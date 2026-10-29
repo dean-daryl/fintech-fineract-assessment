@@ -40,7 +40,7 @@ postman/                  collection.json
 evidence/                 build logs, simulation output
 ```
 
-The Fineract source clone lives OUTSIDE this repository. Only patch files are committed here.
+The Fineract source clone lives in `fineract-src/` (gitignored, never committed). Only patch files are committed here.
 
 ## Commands
 

@@ -10,7 +10,7 @@ The Java change must be small, targeted, and reproducible from a clean clone of 
 ## Before changing anything
 
 1. Confirm the pinned tag from the repo README (`FINERACT_TAG` in `fineract-customization/Dockerfile`).
-2. Work in a Fineract clone OUTSIDE the assessment repo, on a branch made from the tag: `git checkout -b gl-external-ref <tag>`.
+2. Work in the gitignored Fineract clone at `fineract-src/` in the assessment repo, on a branch made from the tag: `git checkout -b gl-external-ref <tag>`.
 3. Read the existing code before designing. For GL accounts, start from the accounting module: the GL account entity, its JSON command handlers (create/update), the write service, the data validator, and the API resource. Note what the tag already stores (for example an existing external ID or tag field) and record it in DECISIONS.md.
 4. Prefer extending the existing GL account command path over a standalone endpoint. It keeps Fineract's validation, permissions, transaction boundary and audit trail.
 

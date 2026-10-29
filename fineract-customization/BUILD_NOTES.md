@@ -19,13 +19,13 @@ Our Java change lives as `git format-patch` files in `patch/`. The Dockerfile ap
 ### Working on the patch
 
 ```bash
-git clone --depth 1 --branch 1.16.1 https://github.com/apache/fineract.git ../fineract
-cd ../fineract && git switch -c gl-external-ref
+git clone --depth 1 --branch 1.16.1 https://github.com/apache/fineract.git fineract-src
+cd fineract-src && git switch -c gl-external-ref
 # edit, then commit; only committed changes become patches
 cd - && make build-fineract
 ```
 
-`make build-fineract` first runs `make patches`, which deletes `patch/*.patch` and regenerates them with `git format-patch <tag>` from the clone at `FINERACT_SRC` (default `../fineract`). It warns if the clone has uncommitted changes. If there is no clone (a grader's machine), the committed patches are used unchanged.
+`make build-fineract` first runs `make patches`, which deletes `patch/*.patch` and regenerates them with `git format-patch <tag>` from the clone at `FINERACT_SRC` (default `fineract-src`, gitignored). It warns if the clone has uncommitted changes. If there is no clone (a grader's machine), the committed patches are used unchanged.
 
 ### Patch pipeline evidence
 

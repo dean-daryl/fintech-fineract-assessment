@@ -15,3 +15,9 @@ Fineract is compiled in a multi-stage Docker build on `eclipse-temurin:25.0.4.1_
 PostgreSQL 16.15 hosts `fineract_tenants`, `fineract_default`, `erp` and `integration` as separate databases. Fineract 1.16.1 supports PostgreSQL, and the integration service's recovery sweep relies on `FOR UPDATE SKIP LOCKED`. Services never read each other's databases.
 
 Known weakness: one server is a shared failure point. Acceptable for an assessment stack.
+
+## D-004: Fineract image build settings
+
+- Only `:fineract-provider:bootJar` is built, with upstream's Docker CI exclusions (`-x test -x cucumber -x buildJavaSdk`). Fineract's own test suite is not run in the image build; our patch's tests run separately via `make test-java`.
+- The tag's `gradle.properties` requests a 12 GB Gradle heap. The build overrides only the heap (`GRADLE_XMX`, default 4g) and caps workers at 2, so it fits an 8 GB Docker Desktop. The other JVM flags from the tag are kept unchanged.
+- The image runs the jar with `java -jar` on Temurin 25 JRE as user `nobody`, with the same JVM flags as the tag's Jib config. We do not use Jib, because the Dockerfile must apply our patches between clone and build.

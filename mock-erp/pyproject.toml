@@ -5,5 +5,7 @@ description = "Mock ERP: chart of accounts and journal entries"
 requires-python = "==3.12.*"
 dependencies = [
     "fastapi>=0.115",
+    "psycopg[binary]>=3.2.3",
+    "sqlalchemy>=2.0.36",
     "uvicorn>=0.32",
 ]

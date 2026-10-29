@@ -1,0 +1,267 @@
+> Task :buildSrc:extractPluginRequests UP-TO-DATE
+> Task :buildSrc:generatePluginAdapters UP-TO-DATE
+> Task :buildSrc:compileJava UP-TO-DATE
+> Task :buildSrc:compileGroovy UP-TO-DATE
+> Task :buildSrc:compileGroovyPlugins UP-TO-DATE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources UP-TO-DATE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+
+> Configure project :
+project version: 1.17.0-SNAPSHOT
+
+> Task :fineract-avro-schemas:preprocessAvroSchemas UP-TO-DATE
+> Task :fineract-avro-schemas:spotlessJson UP-TO-DATE
+> Task :fineract-avro-schemas:spotlessJsonApply UP-TO-DATE
+> Task :fineract-avro-schemas:buildJavaSdk UP-TO-DATE
+> Task :fineract-validation:compileJava UP-TO-DATE
+> Task :fineract-avro-schemas:compileJava UP-TO-DATE
+> Task :fineract-command:compileJava UP-TO-DATE
+> Task :fineract-validation:processResources UP-TO-DATE
+> Task :fineract-validation:classes UP-TO-DATE
+> Task :fineract-command:processResources UP-TO-DATE
+> Task :fineract-command:classes UP-TO-DATE
+> Task :fineract-avro-schemas:processResources UP-TO-DATE
+> Task :fineract-avro-schemas:classes UP-TO-DATE
+> Task :fineract-validation:jar UP-TO-DATE
+> Task :fineract-command:jar UP-TO-DATE
+> Task :fineract-avro-schemas:jar UP-TO-DATE
+> Task :fineract-command-audit:compileJava UP-TO-DATE
+> Task :fineract-command-audit:processResources UP-TO-DATE
+> Task :fineract-command-audit:classes UP-TO-DATE
+> Task :fineract-command-jdbc:compileJava UP-TO-DATE
+> Task :fineract-command-jdbc:processResources UP-TO-DATE
+> Task :fineract-command-jdbc:classes UP-TO-DATE
+> Task :fineract-command-audit:jar
+> Task :fineract-document:processResources NO-SOURCE
+> Task :fineract-command-jdbc:jar
+
+> Task :fineract-core:generateStaticWeavingPersistenceXml
+Generated EclipseLink static weaving persistence.xml for :fineract-core with 40 managed classes from 1 modules
+
+> Task :fineract-tax:generateStaticWeavingPersistenceXml
+Generated EclipseLink static weaving persistence.xml for :fineract-tax with 44 managed classes from 2 modules
+
+> Task :fineract-tax:processResources NO-SOURCE
+
+> Task :fineract-cob:generateStaticWeavingPersistenceXml
+Generated EclipseLink static weaving persistence.xml for :fineract-cob with 42 managed classes from 2 modules
+
+> Task :fineract-charge:generateStaticWeavingPersistenceXml
+Generated EclipseLink static weaving persistence.xml for :fineract-charge with 47 managed classes from 3 modules
+
+> Task :fineract-charge:processResources UP-TO-DATE
+> Task :fineract-cob:processResources NO-SOURCE
+> Task :fineract-core:compileJava UP-TO-DATE
+> Task :fineract-core:processResources NO-SOURCE
+> Task :fineract-core:classes UP-TO-DATE
+> Task :fineract-core:jar UP-TO-DATE
+> Task :fineract-tax:compileJava UP-TO-DATE
+> Task :fineract-tax:classes UP-TO-DATE
+> Task :fineract-tax:jar UP-TO-DATE
+
+> Task :fineract-branch:generateStaticWeavingPersistenceXml
+Generated EclipseLink static weaving persistence.xml for :fineract-branch with 59 managed classes from 5 modules
+
+> Task :fineract-charge:compileJava UP-TO-DATE
+> Task :fineract-charge:classes UP-TO-DATE
+> Task :fineract-charge:jar UP-TO-DATE
+> Task :fineract-branch:processResources UP-TO-DATE
+
+> Task :fineract-accounting:generateStaticWeavingPersistenceXml
+Generated EclipseLink static weaving persistence.xml for :fineract-accounting with 55 managed classes from 4 modules
+
+> Task :fineract-cob:compileJava UP-TO-DATE
+> Task :fineract-cob:classes UP-TO-DATE
+> Task :fineract-accounting:compileJava UP-TO-DATE
+> Task :fineract-accounting:processResources UP-TO-DATE
+> Task :fineract-accounting:classes UP-TO-DATE
+> Task :fineract-document:compileJava UP-TO-DATE
+> Task :fineract-document:classes UP-TO-DATE
+> Task :fineract-cob:jar
+> Task :fineract-document:jar
+> Task :fineract-accounting:jar
+> Task :fineract-accounting:compileTestJava UP-TO-DATE
+> Task :fineract-accounting:processTestResources NO-SOURCE
+> Task :fineract-accounting:testClasses UP-TO-DATE
+
+> Task :fineract-rates:generateStaticWeavingPersistenceXml
+Generated EclipseLink static weaving persistence.xml for :fineract-rates with 42 managed classes from 2 modules
+
+> Task :fineract-loan:generateStaticWeavingPersistenceXml
+Generated EclipseLink static weaving persistence.xml for :fineract-loan with 114 managed classes from 7 modules
+
+> Task :fineract-branch:compileJava UP-TO-DATE
+> Task :fineract-branch:classes UP-TO-DATE
+> Task :fineract-rates:compileJava UP-TO-DATE
+> Task :fineract-rates:processResources UP-TO-DATE
+> Task :fineract-rates:classes UP-TO-DATE
+> Task :fineract-branch:jar
+> Task :fineract-loan:processResources UP-TO-DATE
+> Task :fineract-report:compileJava UP-TO-DATE
+> Task :fineract-report:processResources NO-SOURCE
+> Task :fineract-report:classes UP-TO-DATE
+
+> Task :fineract-investor:generateStaticWeavingPersistenceXml
+Generated EclipseLink static weaving persistence.xml for :fineract-investor with 122 managed classes from 8 modules
+
+> Task :fineract-investor:processResources UP-TO-DATE
+> Task :fineract-rates:jar
+> Task :fineract-loan:compileJava UP-TO-DATE
+> Task :fineract-loan:classes UP-TO-DATE
+> Task :fineract-report:jar
+
+> Task :fineract-progressive-loan:generateStaticWeavingPersistenceXml
+Generated EclipseLink static weaving persistence.xml for :fineract-progressive-loan with 117 managed classes from 8 modules
+
+> Task :fineract-progressive-loan:processResources UP-TO-DATE
+
+> Task :fineract-security:generateStaticWeavingPersistenceXml
+Generated EclipseLink static weaving persistence.xml for :fineract-security with 42 managed classes from 2 modules
+
+> Task :fineract-security:compileJava UP-TO-DATE
+> Task :fineract-security:processResources NO-SOURCE
+> Task :fineract-security:classes UP-TO-DATE
+> Task :fineract-security:jar
+
+> Task :fineract-working-capital-loan:generateStaticWeavingPersistenceXml
+Generated EclipseLink static weaving persistence.xml for :fineract-working-capital-loan with 139 managed classes from 8 modules
+
+> Task :fineract-working-capital-loan:processResources UP-TO-DATE
+> Task :integration-tests:compileJava NO-SOURCE
+> Task :integration-tests:processResources NO-SOURCE
+> Task :integration-tests:classes UP-TO-DATE
+> Task :integration-tests:processTestResources UP-TO-DATE
+
+> Task :fineract-loan-origination:generateStaticWeavingPersistenceXml
+Generated EclipseLink static weaving persistence.xml for :fineract-loan-origination with 142 managed classes from 9 modules
+
+> Task :fineract-loan-origination:processResources UP-TO-DATE
+
+> Task :fineract-savings:generateStaticWeavingPersistenceXml
+Generated EclipseLink static weaving persistence.xml for :fineract-savings with 82 managed classes from 7 modules
+
+> Task :fineract-savings:compileJava UP-TO-DATE
+> Task :fineract-savings:processResources UP-TO-DATE
+> Task :fineract-savings:classes UP-TO-DATE
+> Task :fineract-loan:jar
+> Task :fineract-investor:compileJava UP-TO-DATE
+> Task :fineract-investor:classes UP-TO-DATE
+> Task :fineract-working-capital-loan:compileJava UP-TO-DATE
+> Task :fineract-progressive-loan:compileJava UP-TO-DATE
+> Task :fineract-progressive-loan:classes UP-TO-DATE
+> Task :fineract-working-capital-loan:classes UP-TO-DATE
+> Task :fineract-savings:jar
+> Task :fineract-investor:jar
+> Task :fineract-progressive-loan:jar
+> Task :fineract-working-capital-loan:jar
+> Task :fineract-loan-origination:compileJava UP-TO-DATE
+> Task :fineract-loan-origination:classes UP-TO-DATE
+> Task :fineract-loan-origination:jar
+> Task :fineract-client-feign:spotlessMisc UP-TO-DATE
+> Task :fineract-client-feign:spotlessMiscApply UP-TO-DATE
+> Task :fineract-client-feign:processResources
+> Task :fineract-client:spotlessMisc UP-TO-DATE
+> Task :fineract-client:spotlessMiscApply UP-TO-DATE
+> Task :fineract-client:processResources
+
+> Task :fineract-accounting:test
+
+org.apache.fineract.accounting.glaccount.service.GLAccountExternalReferenceMatcherTest
+
+  Test differentUsageDoesNotMatch() PASSED
+  Test identicalPayloadMatches() PASSED
+  Test differentDescriptionDoesNotMatch() PASSED
+  Test differentTypeDoesNotMatch() PASSED
+  Test missingAndEmptyDescriptionAreTheSame() PASSED
+  Test differentGlCodeDoesNotMatch() PASSED
+  Test differentParentDoesNotMatch() PASSED
+  Test differentManualEntriesAllowedDoesNotMatch() PASSED
+  Test differentNameDoesNotMatch() PASSED
+
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+
+> Task :fineract-provider:generateStaticWeavingPersistenceXml
+Generated EclipseLink static weaving persistence.xml for :fineract-provider with 272 managed classes from 15 modules
+
+> Task :fineract-provider:compileJava UP-TO-DATE
+
+> Task :fineract-accounting:test
+
+org.apache.fineract.accounting.glaccount.service.GLAccountSyncTest
+
+  Test sameReferenceAndPayloadReturnsExistingAccount() PASSED
+  Test plainCreateRejectsExternalReference() PASSED
+  Test concurrentInsertOfSameReferenceIsRetriable() PASSED
+  Test glCodeUsedByAnotherAccountConflicts() PASSED
+  Test sameReferenceWithDifferentPayloadConflicts() PASSED
+  Test accountCommittedBetweenTheTwoLookupsIsReturned() PASSED
+
+SUCCESS: Executed 15 tests in 3.4s
+
+
+> Task :fineract-provider:generateGitProperties
+> Task :fineract-provider:generateRebelMain UP-TO-DATE
+> Task :fineract-provider:processResources
+> Task :fineract-provider:classes
+> Task :fineract-provider:prepareInputYaml UP-TO-DATE
+> Task :fineract-provider:resolve
+> Task :fineract-client:buildJavaSdk UP-TO-DATE
+> Task :fineract-client:cleanupGeneratedJavaFiles UP-TO-DATE
+> Task :fineract-client-feign:buildJavaSdk UP-TO-DATE
+> Task :fineract-client:buildTypescriptAngularSdk UP-TO-DATE
+> Task :fineract-client-feign:cleanupGeneratedJavaFiles UP-TO-DATE
+> Task :fineract-client-feign:compileJava UP-TO-DATE
+> Task :fineract-client-feign:classes
+> Task :fineract-client-feign:jar
+> Task :fineract-provider:jar
+
+> Task :fineract-client:buildAsciidoc
+Cleaned up output directory /Users/darylmurenzi/IdeaProjects/fintech-fineract-assessment/fineract-src/fineract-client/build/generated/asciidoc before code generation.
+There were issues with the specification, but validation has been explicitly disabled.
+Errors: 
+	-attribute paths.'/v1/templates/{templateId}/template'(get).responses.default.description is missing
+	-attribute paths.'/v1/templates/template'(get).responses.default.description is missing
+
+base part for include markup lambda not found: null as /Users/darylmurenzi/.gradle/daemon/9.7.1/null
+base part for include markup lambda not found: null as /Users/darylmurenzi/.gradle/daemon/9.7.1/null
+No application/json content media type found in response. Response examples can currently only be generated for application/json media type.
+No application/json content media type found in response. Response examples can currently only be generated for application/json media type.
+############################################################################################
+# Thanks for using OpenAPI Generator.                                                      #
+# We appreciate your support! Please consider donation to help us maintain this project.   #
+# https://opencollective.com/openapi_generator/donate                                      #
+############################################################################################
+Successfully generated code to /Users/darylmurenzi/IdeaProjects/fintech-fineract-assessment/fineract-src/fineract-client/build/generated/asciidoc
+
+> Task :fineract-client:compileJava UP-TO-DATE
+> Task :fineract-client:classes
+> Task :integration-tests:compileTestJava UP-TO-DATE
+> Task :integration-tests:testClasses UP-TO-DATE
+> Task :fineract-client:jar
+
+> Task :integration-tests:test
+
+org.apache.fineract.integrationtests.accounting.GLAccountExternalReferenceIntegrationTest
+
+  Test concurrentIdenticalSyncsCreateOneAccount() PASSED (2.3s)
+  Test syncRequiresSyncPermission() PASSED
+  Test sameReferenceWithDifferentPayloadIsRejectedWithConflict() PASSED
+  Test glCodeUsedByAnotherAccountIsRejectedWithConflict() PASSED
+  Test identicalSyncReturnsTheSameAccount() PASSED
+
+SUCCESS: Executed 5 tests in 8.4s
+
+
+[Incubating] Problems report is available at: file:///Users/darylmurenzi/IdeaProjects/fintech-fineract-assessment/fineract-src/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.7.1/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 1m 10s
+112 actionable tasks: 41 executed, 71 up-to-date
+Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.7.1/userguide/configuration_cache_enabling.html

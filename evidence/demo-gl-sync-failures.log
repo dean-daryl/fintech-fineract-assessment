@@ -1,0 +1,14 @@
+== 1. Fineract: same reference, different payload -> expect 409
+HTTP 409
+  409 error.msg.glaccount.external.reference.conflict
+== 2. Fineract down: create ERP account GL-4100, stop Fineract, sync
+ERP POST HTTP 201
+fineract stopped
+  GL-1200 SYNCED attempts=1 
+  GL-4100 SYNC_PENDING attempts=1 POST /glaccounts/sync: ConnectError('[Errno -2] Name or service not kn
+== 3. Start Fineract, wait healthy, then POST /admin/recover
+fineract healthy
+{"gl_accounts_processed":1}
+  GL-1200 SYNCED attempts=1
+  GL-4100 SYNCED attempts=3
+  Fineract GL-4100: glCode 4100 type INCOME

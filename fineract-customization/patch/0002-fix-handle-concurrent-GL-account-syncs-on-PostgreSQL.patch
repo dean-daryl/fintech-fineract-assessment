@@ -1,0 +1,125 @@
+From 7663832dad41793a80ba337af945cedef2405484 Mon Sep 17 00:00:00 2001
+From: Dean Daryl MURENZI <deandaryl7@gmail.com>
+Date: Thu, 29 Oct 2026 21:25:44 +0200
+Subject: [PATCH 2/2] fix: handle concurrent GL account syncs on PostgreSQL
+
+---
+ ...WritePlatformServiceJpaRepositoryImpl.java | 29 ++++++++++++-------
+ .../glaccount/service/GLAccountSyncTest.java  | 16 ++++++++--
+ 2 files changed, 33 insertions(+), 12 deletions(-)
+
+diff --git a/fineract-accounting/src/main/java/org/apache/fineract/accounting/glaccount/service/GLAccountWritePlatformServiceJpaRepositoryImpl.java b/fineract-accounting/src/main/java/org/apache/fineract/accounting/glaccount/service/GLAccountWritePlatformServiceJpaRepositoryImpl.java
+index 78302f5fda..e0ba5b248e 100644
+--- a/fineract-accounting/src/main/java/org/apache/fineract/accounting/glaccount/service/GLAccountWritePlatformServiceJpaRepositoryImpl.java
++++ b/fineract-accounting/src/main/java/org/apache/fineract/accounting/glaccount/service/GLAccountWritePlatformServiceJpaRepositoryImpl.java
+@@ -18,6 +18,7 @@
+  */
+ package org.apache.fineract.accounting.glaccount.service;
+ 
++import java.sql.SQLException;
+ import java.util.Map;
+ import java.util.Optional;
+ import lombok.RequiredArgsConstructor;
+@@ -63,8 +64,9 @@ public class GLAccountWritePlatformServiceJpaRepositoryImpl implements GLAccount
+ 
+     private static final Logger LOG = LoggerFactory.getLogger(GLAccountWritePlatformServiceJpaRepositoryImpl.class);
+     private static final String GL_ACCOUNT = "glAccount";
+-    private static final String GL_CODE_UNIQUE_CONSTRAINT = "acc_gl_code";
+-    private static final String EXTERNAL_REFERENCE_UNIQUE_CONSTRAINT = "acc_gl_account_external_reference_uq";
++    private static final String UNIQUE_VIOLATION_SQL_STATE = "23505";
++    private static final String MYSQL_INTEGRITY_SQL_STATE = "23000";
++    private static final int MYSQL_DUPLICATE_KEY_ERROR = 1062;
+ 
+     private final GLAccountRepository glAccountRepository;
+     private final JournalEntryRepository glJournalEntryRepository;
+@@ -100,19 +102,21 @@ public class GLAccountWritePlatformServiceJpaRepositoryImpl implements GLAccount
+         accountCommand.validateForSync();
+         final String externalReference = accountCommand.externalReference();
+ 
+-        final Optional<GLAccount> existing = this.glAccountRepository.findOneByExternalReference(externalReference);
++        final Optional<GLAccount> existing = this.glAccountRepository.findOneByExternalReference(externalReference)
++                .or(() -> this.glAccountRepository.findOneByGlCode(accountCommand.glCode()));
+         if (existing.isPresent()) {
+-            if (!GLAccountExternalReferenceMatcher.matches(existing.get(), accountCommand)) {
++            final GLAccount account = existing.get();
++            if (!externalReference.equals(account.getExternalReference())) {
++                throw GLAccountExternalReferenceConflictException.glCodeInUse(externalReference, accountCommand.glCode());
++            }
++            if (!GLAccountExternalReferenceMatcher.matches(account, accountCommand)) {
+                 throw GLAccountExternalReferenceConflictException.differentPayload(externalReference);
+             }
+             return new CommandProcessingResultBuilder() //
+                     .withCommandId(command.commandId()) //
+-                    .withEntityId(existing.get().getId()) //
++                    .withEntityId(account.getId()) //
+                     .build();
+         }
+-        if (this.glAccountRepository.findOneByGlCode(accountCommand.glCode()).isPresent()) {
+-            throw GLAccountExternalReferenceConflictException.glCodeInUse(externalReference, accountCommand.glCode());
+-        }
+ 
+         try {
+             final GLAccount glAccount = saveNewGLAccount(command, externalReference);
+@@ -122,8 +126,7 @@ public class GLAccountWritePlatformServiceJpaRepositoryImpl implements GLAccount
+                     .build();
+         } catch (final JpaSystemException | DataIntegrityViolationException dve) {
+             final Throwable throwable = dve.getMostSpecificCause();
+-            if (throwable.getMessage().contains(EXTERNAL_REFERENCE_UNIQUE_CONSTRAINT)
+-                    || throwable.getMessage().contains(GL_CODE_UNIQUE_CONSTRAINT)) {
++            if (isUniqueViolation(throwable)) {
+                 throw new GLAccountExternalReferenceConcurrentSyncException(externalReference, dve);
+             }
+             handleGLAccountDataIntegrityIssues(command, throwable, dve);
+@@ -131,6 +134,12 @@ public class GLAccountWritePlatformServiceJpaRepositoryImpl implements GLAccount
+         }
+     }
+ 
++    private static boolean isUniqueViolation(final Throwable cause) {
++        return cause instanceof SQLException sqlException && (UNIQUE_VIOLATION_SQL_STATE.equals(sqlException.getSQLState())
++                || (MYSQL_INTEGRITY_SQL_STATE.equals(sqlException.getSQLState())
++                        && sqlException.getErrorCode() == MYSQL_DUPLICATE_KEY_ERROR));
++    }
++
+     private GLAccount saveNewGLAccount(final JsonCommand command, final String externalReference) {
+         // check parent is valid
+         final Long parentId = command.longValueOfParameterNamed(GLAccountJsonInputParams.PARENT_ID.getValue());
+diff --git a/fineract-accounting/src/test/java/org/apache/fineract/accounting/glaccount/service/GLAccountSyncTest.java b/fineract-accounting/src/test/java/org/apache/fineract/accounting/glaccount/service/GLAccountSyncTest.java
+index e3b18521ec..8f09f98da9 100644
+--- a/fineract-accounting/src/test/java/org/apache/fineract/accounting/glaccount/service/GLAccountSyncTest.java
++++ b/fineract-accounting/src/test/java/org/apache/fineract/accounting/glaccount/service/GLAccountSyncTest.java
+@@ -27,6 +27,7 @@ import static org.mockito.Mockito.never;
+ import static org.mockito.Mockito.verify;
+ import static org.mockito.Mockito.when;
+ 
++import java.sql.SQLException;
+ import java.util.Optional;
+ import org.apache.fineract.accounting.glaccount.api.GLAccountJsonInputParams;
+ import org.apache.fineract.accounting.glaccount.command.GLAccountCommand;
+@@ -106,14 +107,25 @@ class GLAccountSyncTest {
+         verify(glAccountRepository, never()).saveAndFlush(any());
+     }
+ 
++    @Test
++    void accountCommittedBetweenTheTwoLookupsIsReturned() {
++        when(glAccountRepository.findOneByExternalReference(REFERENCE)).thenReturn(Optional.empty());
++        when(glAccountRepository.findOneByGlCode("1200")).thenReturn(Optional.of(stored("Loan Receivable")));
++
++        final CommandProcessingResult result = service.syncGLAccount(command);
++
++        assertEquals(42L, result.getResourceId());
++        verify(glAccountRepository, never()).saveAndFlush(any());
++    }
++
+     @Test
+     void concurrentInsertOfSameReferenceIsRetriable() {
+         when(glAccountRepository.findOneByExternalReference(REFERENCE)).thenReturn(Optional.empty());
+         when(glAccountRepository.findOneByGlCode("1200")).thenReturn(Optional.empty());
+         lenient().when(command.longValueOfParameterNamed(anyString())).thenReturn(null);
+         lenient().when(command.longValueOfParameterNamed(GLAccountJsonInputParams.TYPE.getValue())).thenReturn(1L);
+-        when(glAccountRepository.saveAndFlush(any())).thenThrow(new DataIntegrityViolationException(
+-                "duplicate key value violates unique constraint \"acc_gl_account_external_reference_uq\""));
++        when(glAccountRepository.saveAndFlush(any())).thenThrow(new DataIntegrityViolationException("duplicate key",
++                new SQLException("duplicate key value violates unique constraint \"acc_gl_account_gl_code_key\"", "23505")));
+ 
+         final GLAccountExternalReferenceConcurrentSyncException exception = assertThrows(
+                 GLAccountExternalReferenceConcurrentSyncException.class, () -> service.syncGLAccount(command));

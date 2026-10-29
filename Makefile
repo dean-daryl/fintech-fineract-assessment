@@ -7,8 +7,9 @@ DOCKER_BUILD_FLAGS ?=
 FINERACT_SRC ?= fineract-src
 FINERACT_TAG := $(shell sed -n 's/^ARG FINERACT_TAG=//p' fineract-customization/Dockerfile)
 PATCH_DIR := $(CURDIR)/fineract-customization/patch
+JAVA_HOME_25 ?= $(shell /usr/libexec/java_home -v 25 2>/dev/null)
 
-.PHONY: build-fineract patches up down reset logs ps
+.PHONY: build-fineract patches up down reset logs ps simulate-gl-sync demo-fineract-gl evidence-compose-up test-java
 
 # Builds what changed and waits until every service reports healthy.
 # Fineract is built through build-fineract (same builder and cache as before), not
@@ -51,3 +52,20 @@ patches:
 build-fineract: patches
 	set -o pipefail; DOCKER_BUILDKIT=1 docker build --progress=plain --load $(DOCKER_BUILD_FLAGS) \
 		-t $(FINERACT_IMAGE) fineract-customization 2>&1 | tee $(BUILD_LOG)
+
+simulate-gl-sync:
+	set -o pipefail; python3 scripts/simulate_gl_sync.py 2>&1 | tee evidence/simulate-gl-sync.log
+
+demo-fineract-gl:
+	set -o pipefail; python3 scripts/demo_fineract_gl_sync.py 2>&1 | tee evidence/demo-fineract-gl-sync.log
+
+evidence-compose-up:
+	scripts/capture_compose_up.sh 2>&1 | tee evidence/compose-up.log
+
+# Runs the patch's JUnit tests in the Fineract clone (patches applied as commits).
+# The integration test calls the running stack from `make up` on https://localhost:8443.
+test-java:
+	@test -d "$(FINERACT_SRC)/.git" || { echo "test-java needs the Fineract clone at $(FINERACT_SRC)"; exit 1; }
+	set -o pipefail; cd $(FINERACT_SRC) && JAVA_HOME=$(JAVA_HOME_25) ./gradlew --console=plain \
+		:fineract-accounting:test --tests '*GLAccountExternalReferenceMatcherTest' --tests '*GLAccountSyncTest' \
+		:integration-tests:test --tests '*GLAccountExternalReferenceIntegrationTest' 2>&1 | tee $(CURDIR)/evidence/test-java.log

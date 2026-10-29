@@ -1,6 +1,70 @@
-from fastapi import FastAPI
+import asyncio
+import logging
+import uuid
+from collections.abc import AsyncIterator, Awaitable, Callable
+from contextlib import asynccontextmanager, suppress
 
-app = FastAPI(title="Integration Service")
+from fastapi import FastAPI, Request, Response
+
+from app.api.gl_accounts import router as gl_accounts_router
+from app.clients.erp import ErpClient
+from app.clients.fineract import FineractClient
+from app.config import get_settings
+from app.db import Base, SessionLocal, engine
+from app.logs import configure_logging, correlation_id
+from app.services.gl_sync import GLSyncService
+
+log = logging.getLogger(__name__)
+
+
+async def _recovery_loop(service: GLSyncService, interval_seconds: int) -> None:
+    while True:
+        try:
+            processed = await asyncio.to_thread(service.recover)
+            if processed:
+                log.info("Recovery sweep processed %d GL account(s)", processed)
+        except Exception:
+            log.exception("Recovery sweep failed")
+        await asyncio.sleep(interval_seconds)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    configure_logging()
+    settings = get_settings()
+    Base.metadata.create_all(engine)
+
+    fineract = FineractClient(
+        base_url=settings.fineract_base_url,
+        tenant=settings.fineract_tenant,
+        username=settings.fineract_username,
+        password=settings.fineract_password,
+        verify_tls=settings.fineract_tls_verify,
+        timeout_seconds=settings.fineract_timeout_seconds,
+    )
+    erp = ErpClient(settings.erp_base_url)
+    app.state.gl_sync = GLSyncService(SessionLocal, erp, fineract, settings)
+
+    recovery = asyncio.create_task(_recovery_loop(app.state.gl_sync, settings.recovery_interval_seconds))
+    yield
+    recovery.cancel()
+    with suppress(asyncio.CancelledError):
+        await recovery
+
+
+app = FastAPI(title="Integration Service", lifespan=lifespan)
+app.include_router(gl_accounts_router)
+
+
+@app.middleware("http")
+async def correlation_id_middleware(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
+    token = correlation_id.set(request.headers.get("X-Correlation-ID") or str(uuid.uuid4()))
+    try:
+        response = await call_next(request)
+        response.headers["X-Correlation-ID"] = correlation_id.get() or ""
+        return response
+    finally:
+        correlation_id.reset(token)
 
 
 @app.get("/health")

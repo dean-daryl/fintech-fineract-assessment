@@ -1,0 +1,21 @@
+Account: {"code": "1200", "name": "Loan Receivable", "type": "ASSET", "currency": "RWF", "external_reference": "GL-1200"}
+
+POST http://localhost:8001/api/accounts x4 (parallel)
+  -> 200
+  -> 201
+  -> 200
+  -> 200
+
+POST http://localhost:8000/gl-accounts/sync x4 (parallel)
+  -> 200 [{"external_reference": "GL-1200", "erp_code": "1200", "status": "SYNC_PENDING", "attempts": 0, "last_error": null, "updated_at": "2026-10-29T19:19:22.404449Z"}]
+  -> 200 [{"external_reference": "GL-1200", "erp_code": "1200", "status": "SYNC_PENDING", "attempts": 0, "last_error": null, "updated_at": "2026-10-29T19:19:22.404449Z"}]
+  -> 200 [{"external_reference": "GL-1200", "erp_code": "1200", "status": "SYNC_PENDING", "attempts": 0, "last_error": null, "updated_at": "2026-10-29T19:19:22.404449Z"}]
+  -> 200 [{"external_reference": "GL-1200", "erp_code": "1200", "status": "SYNCED", "attempts": 1, "last_error": null, "updated_at": "2026-10-29T19:19:22.585960Z"}]
+
+Result for GL-1200:
+  ERP accounts             1
+  Fineract GL accounts     1
+  integration sync rows    1
+  sync status              SYNCED
+
+Expected 1 / 1 / 1 and SYNCED: PASS

@@ -1,7 +1,134 @@
 {
   "info": {
     "name": "fintech-fineract-assessment",
+    "description": "Run in order: Mock ERP > Create account, then Integration Service > Sync GL accounts. Fineract uses a self-signed certificate: turn off SSL certificate verification in Postman settings for the Fineract requests.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
-  "item": []
+  "variable": [
+    { "key": "erp_url", "value": "http://localhost:8001" },
+    { "key": "integration_url", "value": "http://localhost:8000" },
+    { "key": "fineract_url", "value": "https://localhost:8443/fineract-provider/api/v1" },
+    { "key": "fineract_tenant", "value": "default" },
+    { "key": "fineract_username", "value": "mifos" },
+    { "key": "fineract_password", "value": "password" },
+    { "key": "gl_reference", "value": "GL-1200" }
+  ],
+  "item": [
+    {
+      "name": "Mock ERP",
+      "item": [
+        {
+          "name": "Create account",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{erp_url}}/api/accounts",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"1200\",\n  \"name\": \"Loan Receivable\",\n  \"type\": \"ASSET\",\n  \"currency\": \"RWF\",\n  \"external_reference\": \"{{gl_reference}}\"\n}"
+            },
+            "description": "201 when new, 200 with the existing account when sent again unchanged, 409 when the reference or code is reused with different details."
+          }
+        },
+        {
+          "name": "Create account (conflicting payload)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{erp_url}}/api/accounts",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"1200\",\n  \"name\": \"Loans Receivable (renamed)\",\n  \"type\": \"ASSET\",\n  \"currency\": \"RWF\",\n  \"external_reference\": \"{{gl_reference}}\"\n}"
+            },
+            "description": "Expected 409 after 'Create account' has run."
+          }
+        },
+        {
+          "name": "List accounts",
+          "request": { "method": "GET", "url": "{{erp_url}}/api/accounts" }
+        },
+        {
+          "name": "Get account",
+          "request": { "method": "GET", "url": "{{erp_url}}/api/accounts/{{gl_reference}}" }
+        },
+        {
+          "name": "Health",
+          "request": { "method": "GET", "url": "{{erp_url}}/health" }
+        }
+      ]
+    },
+    {
+      "name": "Integration Service",
+      "item": [
+        {
+          "name": "Sync GL accounts",
+          "request": {
+            "method": "POST",
+            "url": "{{integration_url}}/gl-accounts/sync",
+            "description": "Reads every ERP account and creates the missing GL accounts in Fineract. Safe to call repeatedly. Returns the sync status of each account."
+          }
+        },
+        {
+          "name": "List GL sync statuses",
+          "request": { "method": "GET", "url": "{{integration_url}}/gl-accounts" }
+        },
+        {
+          "name": "Run recovery sweep",
+          "request": {
+            "method": "POST",
+            "url": "{{integration_url}}/admin/recover",
+            "description": "Retries GL accounts left in SYNC_PENDING whose next attempt is due. Also runs on startup and every 30 seconds."
+          }
+        },
+        {
+          "name": "Health",
+          "request": { "method": "GET", "url": "{{integration_url}}/health" }
+        }
+      ]
+    },
+    {
+      "name": "Fineract (direct, for checking)",
+      "auth": {
+        "type": "basic",
+        "basic": [
+          { "key": "username", "value": "{{fineract_username}}" },
+          { "key": "password", "value": "{{fineract_password}}" }
+        ]
+      },
+      "item": [
+        {
+          "name": "Get GL account by external reference",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Fineract-Platform-TenantId", "value": "{{fineract_tenant}}" }],
+            "url": "{{fineract_url}}/glaccounts/external-reference/{{gl_reference}}"
+          }
+        },
+        {
+          "name": "List GL accounts",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Fineract-Platform-TenantId", "value": "{{fineract_tenant}}" }],
+            "url": "{{fineract_url}}/glaccounts"
+          }
+        },
+        {
+          "name": "Sync GL account (patched endpoint)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Fineract-Platform-TenantId", "value": "{{fineract_tenant}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{fineract_url}}/glaccounts/sync",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"externalReference\": \"{{gl_reference}}\",\n  \"glCode\": \"1200\",\n  \"name\": \"Loan Receivable\",\n  \"type\": 1,\n  \"usage\": 1,\n  \"manualEntriesAllowed\": true\n}"
+            },
+            "description": "Called by the integration service. Same reference and payload returns the existing account; a different payload returns 409."
+          }
+        }
+      ]
+    }
+  ]
 }

@@ -58,11 +58,41 @@ Known weakness: one server is a shared failure point. Acceptable for an assessme
 
 **Why a new command, not a new controller.** It runs through Fineract's normal command pipeline, so permissions, audit log and transactions work the same as the stock create. The stock `POST /glaccounts` is unchanged.
 
-**Concurrent requests.** If two identical syncs race, the database unique constraint stops the second insert. Fineract's built-in command retry then re-runs it, finds the first account and returns it. No duplicate, no 500.
+**Concurrent requests.** If two identical syncs race, the database unique constraint stops the second insert. Fineract's built-in command retry then re-runs it, finds the first account and returns it. No duplicate, no error. The violation is recognised by its SQL state (unique violation), not by constraint name: the first version matched names and broke on PostgreSQL, where the `gl_code` constraint is called `acc_gl_account_gl_code_key`, not `acc_gl_code` as the entity says. The 10-parallel-request demo caught it (fix in patch `0002`).
 
 **Not Fineract's job.** Mapping ERP types (`"ASSET"` → `1`) and checking currency happen in the integration service. Fineract GL accounts have no currency.
 
 **Known weaknesses.**
-- Constraint violations are recognised by name in the database error message, the same way stock Fineract does it. Renaming the constraint would break this.
+- Stock Fineract still matches `acc_gl_code` by name, so on PostgreSQL a duplicate `glCode` on the stock `POST /glaccounts` returns a generic data-integrity 403 instead of its intended message. Not fixed: outside the patch's scope.
 - The response doesn't say whether the account was created or already existed.
 - The reference can't be changed after creation. That's on purpose, since sync is create-only.
+
+## D-008: GL account sync (Python side)
+
+**Trigger: an explicit call.** `POST /gl-accounts/sync` on the integration service reads every ERP account and syncs the ones not yet synced. Bootstrap will call it before creating the loan product, so GL accounts always exist first. No webhook (the ERP would need to call us and retry) and no polling loop (it would run constantly for a rare event).
+
+**Status per account** lives in the integration service's `gl_account_sync` table, one row per ERP `external_reference` (the primary key):
+`SYNC_PENDING` → `SYNCED`, or `FAILED`.
+
+| Situation | What happens |
+|---|---|
+| Fineract answers OK | `SYNCED` |
+| Fineract down or slow | Stays `SYNC_PENDING`; retried 3 times inline, then later with growing delays (5s, 10s, 20s … up to 5 min) |
+| Fineract times out | Looks the account up by reference before resending |
+| Fineract rejects (409, 400, 403) | `FAILED` with the reason; not retried |
+| Unknown type, wrong currency, name > 45 chars | `FAILED`; never sent to Fineract |
+| 10 attempts without success | `FAILED` |
+
+**Retries without a worker.** A recovery sweep picks up due `SYNC_PENDING` rows on startup, every 30 seconds, and on `POST /admin/recover`. Rows are claimed with `FOR UPDATE SKIP LOCKED` plus a 60-second lease, so two sweeps or two sync calls never process the same account at once.
+
+**Same account sent 4 times → one of each.** The ERP's unique constraints give one ERP account, the sync table's primary key gives one row, and Fineract's own reference check gives one GL account.
+
+**Type mapping** is one pure function in `domain/gl_mapping.py`: ASSET→1, LIABILITY→2, EQUITY→3, INCOME→4, EXPENSE→5. Accounts are created as DETAIL accounts with manual entries allowed.
+
+**Not the operations table.** GL sync has its own simple status model from the brief. The operations table and its state machine are for the loan operations in Part B onwards.
+
+**Known weaknesses.**
+- Tables are created with SQLAlchemy `create_all` at startup, not migrations. Fine for an empty assessment database; a real service would use Alembic.
+- The integration service uses Fineract's stock admin user until bootstrap creates a least-privilege one.
+- TLS verification to Fineract is off, because Fineract's image ships a self-signed certificate. Dev only.
+- `FAILED` is final. Fixing the cause and retrying needs a manual step, which isn't built.

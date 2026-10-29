@@ -1,25 +1,38 @@
 # make up / docker compose up evidence
-# captured: 2026-10-29T05:46:40Z
+# captured: 2026-10-29T19:18:48Z
 
 $ docker compose ps
-SERVICE               IMAGE                                     STATUS                    PORTS
-db                    postgres:18.3                             Up 2 minutes (healthy)    0.0.0.0:5433->5432/tcp
-fineract              fineract-custom:local                     Up 2 minutes (healthy)    0.0.0.0:8443->8443/tcp
-integration-service   fineract-assessment-integration-service   Up 20 seconds (healthy)   0.0.0.0:8000->8000/tcp
-mock-erp              fineract-assessment-mock-erp              Up 2 minutes (healthy)    0.0.0.0:8001->8000/tcp
+SERVICE               IMAGE                                     STATUS                        PORTS
+db                    postgres:18.3                             Up About a minute (healthy)   0.0.0.0:5433->5432/tcp
+fineract              fineract-custom:local                     Up About a minute (healthy)   0.0.0.0:8443->8443/tcp
+integration-service   fineract-assessment-integration-service   Up 19 seconds (healthy)       0.0.0.0:8000->8000/tcp
+mock-erp              fineract-assessment-mock-erp              Up About a minute (healthy)   0.0.0.0:8001->8000/tcp
 
 $ curl -sk https://localhost:8443/fineract-provider/actuator/health
 {"groups":["liveness","readiness"],"status":"UP"}
 
-$ curl -sk -u <admin> -H "Fineract-Platform-TenantId: default" https://localhost:8443/fineract-provider/api/v1/offices
-[{"id":1,"name":"Head Office","nameDecorated":"Head Office","externalId":"1","openingDate":[2009,1,1],"hierarchy":"."}]
+$ docker compose logs fineract | grep "Started ServerApplication"
+2026-10-29 19:18:24.558 - INFO 1  [        default] --- [           main] org.apache.fineract.ServerApplication    : Started ServerApplication in 81.634 seconds (process running for 82.289)
+$ docker compose logs fineract | grep -c " ERROR "
+0
+
+# The patch's Liquibase changesets ran on the tenant database:
+$ select id, filename, exectype from databasechangelog where filename like '%0270%'
+1|db/changelog/tenant/parts/0270_add_gl_account_external_reference.xml|EXECUTED
+2|db/changelog/tenant/parts/0270_add_gl_account_external_reference.xml|EXECUTED
+$ select column_name, data_type from information_schema.columns where table_name = 'acc_gl_account' and column_name = 'external_reference'
+external_reference|character varying
+$ select conname from pg_constraint where conname = 'acc_gl_account_external_reference_uq'
+acc_gl_account_external_reference_uq
+$ select code, entity_name, action_name from m_permission where code = 'SYNC_GLACCOUNT'
+SYNC_GLACCOUNT|GLACCOUNT|SYNC
+
+# The patched endpoint answers (404: no account with this reference yet, not 'no such endpoint'):
+$ curl -sk -u <admin> -H 'Fineract-Platform-TenantId: default' https://localhost:8443/fineract-provider/api/v1/glaccounts/external-reference/NOT-SYNCED
+{"developerMessage":"The requested resource is not available.","httpStatusCode":"404","defaultUserMessage":"The requested resource is not available.","userMessageGlobalisationCode":"error.msg.resource.not.found","errors":[{"developerMessage":"General Ledger account with external reference NOT-SYNCED does not exist","defaultUserMessage":"General Ledger account with external reference NOT-SYNCED does not exist","userMessageGlobalisationCode":"error.msg.glaccount.external.reference.invalid","parameterName":"id","args":[{"value":"NOT-SYNCED"}]}]}
+HTTP 404
 
 $ curl -s http://localhost:8001/health
 {"status":"ok","service":"mock-erp"}
 $ curl -s http://localhost:8000/health
 {"status":"ok","service":"integration-service"}
-
-$ docker compose logs fineract | grep "Started ServerApplication"
-2026-10-29 05:46:17.287 - INFO 1  [        default] --- [           main] org.apache.fineract.ServerApplication    : Started ServerApplication in 98.663 seconds (process running for 99.621)
-$ docker compose logs fineract | grep -c " ERROR "
-0

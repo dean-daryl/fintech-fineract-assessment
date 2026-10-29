@@ -9,7 +9,7 @@ FINERACT_TAG := $(shell sed -n 's/^ARG FINERACT_TAG=//p' fineract-customization/
 PATCH_DIR := $(CURDIR)/fineract-customization/patch
 JAVA_HOME_25 ?= $(shell /usr/libexec/java_home -v 25 2>/dev/null)
 
-.PHONY: build-fineract patches up down reset logs ps simulate-gl-sync demo-fineract-gl evidence-compose-up test-java
+.PHONY: build-fineract patches up down reset logs ps bootstrap verify-fineract-setup evidence-bootstrap simulate-gl-sync demo-fineract-gl evidence-compose-up test-java
 
 # Builds what changed and waits until every service reports healthy.
 # Fineract is built through build-fineract (same builder and cache as before), not
@@ -52,6 +52,23 @@ patches:
 build-fineract: patches
 	set -o pipefail; DOCKER_BUILDKIT=1 docker build --progress=plain --load $(DOCKER_BUILD_FLAGS) \
 		-t $(FINERACT_IMAGE) fineract-customization 2>&1 | tee $(BUILD_LOG)
+
+# Fineract setup through the REST API (get-or-create); safe to run any number of times.
+# Credentials come from .env, so the API user's password matches what the integration service uses.
+bootstrap:
+	@test -f .env || { echo "Missing .env: run 'cp .env.example .env' first"; exit 1; }
+	set -o pipefail; set -a; . ./.env; set +a; python3 scripts/bootstrap.py 2>&1 | tee evidence/bootstrap.log
+
+verify-fineract-setup:
+	set -o pipefail; set -a; . ./.env; set +a; python3 scripts/verify_fineract_setup.py 2>&1 | tee evidence/verify-fineract-setup.log
+
+# Run on a fresh stack (make reset && make up): first run creates, second run changes nothing.
+evidence-bootstrap:
+	@test -f .env || { echo "Missing .env: run 'cp .env.example .env' first"; exit 1; }
+	set -o pipefail; set -a; . ./.env; set +a; \
+	  python3 scripts/bootstrap.py 2>&1 | tee evidence/bootstrap-run1.log; \
+	  python3 scripts/bootstrap.py 2>&1 | tee evidence/bootstrap-run2.log; \
+	  python3 scripts/verify_fineract_setup.py 2>&1 | tee evidence/verify-fineract-setup.log
 
 simulate-gl-sync:
 	set -o pipefail; python3 scripts/simulate_gl_sync.py 2>&1 | tee evidence/simulate-gl-sync.log

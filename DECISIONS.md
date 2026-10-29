@@ -93,6 +93,104 @@ Known weakness: one server is a shared failure point. Acceptable for an assessme
 
 **Known weaknesses.**
 - Tables are created with SQLAlchemy `create_all` at startup, not migrations. Fine for an empty assessment database; a real service would use Alembic.
-- The integration service uses Fineract's stock admin user until bootstrap creates a least-privilege one.
+- The integration service used Fineract's stock admin user until Part B; it now uses the least-privilege user from D-013.
 - TLS verification to Fineract is off, because Fineract's image ships a self-signed certificate. Dev only.
 - `FAILED` is final. Fixing the cause and retrying needs a manual step, which isn't built.
+
+## D-009: Fineract setup is one bootstrap script
+
+`scripts/bootstrap.py` (`make bootstrap`) configures Fineract through the REST API only, in this order: wait for health, office, currency, API role and user, ERP chart of accounts and GL sync, loan product.
+
+- Every step is get-or-create on a natural key: office name, currency code, role name, username, ERP `external_reference`, product `shortName`.
+- If a resource exists with a different configuration, the script stops with a non-zero exit and lists the differences. It never updates anything, so a hand-made change is never silently overwritten.
+- It runs on the host with only the Python standard library, like the simulation scripts. Credentials come from `.env`.
+- Admin credentials (`FINERACT_ADMIN_*`) are used only here. The script refuses to run if the API user and the admin user are the same.
+- The API user is created **before** GL sync, so the sync already runs as the least-privilege user. That shows `SYNC_GLACCOUNT` plus `READ_GLACCOUNT` is enough for it.
+
+**Office.** "Kigali Main Office" is created as a child of Fineract's stock "Head Office", with `externalId=OFFICE-KGL-MAIN` and opening date 2026-01-01. The stock Head Office is not renamed: it is Fineract's own root and other stock data refers to it. Loans and clients go in Kigali Main Office.
+
+**Currency.** RWF. Fineract's currency table already has it with 0 decimal places, which matches ISO 4217 (the franc has no minor unit in use). `PUT /currencies` replaces the whole list, so bootstrap reads the list and adds RWF to it. The stock USD stays.
+
+## D-010: Accounting rule is cash-based
+
+The loan product uses `accountingRule=2` (cash based).
+
+**Why.**
+- Fineract then writes journal entries only for real cash events: disbursement and repayment. Those are exactly the events the integration service sends to the ERP, using Fineract's own principal/interest split. Each ERP entry matches one Fineract transaction.
+- Accrual would add entries that no partner call causes (interest accrued daily or periodically by a scheduled job). Keeping the ERP in step with those would need a separate sync of accrual events. That is outside the brief.
+- Cash needs fewer GL mappings. Accrual also needs interest, fee and penalty receivable accounts.
+
+**Weakness.** Interest income is recognised when it is paid, not as it is earned. A regulated lender reporting under IFRS 9 would need accrual. Switching later means a new product (the rule is a product setting), new receivable accounts in the ERP, and syncing accrual entries.
+
+## D-011: Chart of accounts and product GL mappings
+
+The chart of accounts belongs to the ERP. Bootstrap creates it in the ERP (`POST /api/accounts`, which returns 200 for an identical account), then calls `POST /gl-accounts/sync` on the integration service. Bootstrap stops if any account is not `SYNCED`. Fineract GL ids are looked up by external reference and used only inside bootstrap.
+
+All accounts are in RWF, with `external_reference = GL-<code>`:
+
+| Code | Name | Type | Loan product mapping |
+|---|---|---|---|
+| 1100 | Cash at Bank | ASSET | `fundSourceAccountId` |
+| 1200 | Loan Receivable | ASSET | `loanPortfolioAccountId` |
+| 1300 | Transfers in Suspense | ASSET | `transfersInSuspenseAccountId` |
+| 2100 | Loan Overpayments | LIABILITY | `overpaymentLiabilityAccountId` |
+| 4100 | Interest Income on Loans | INCOME | `interestOnLoanAccountId` |
+| 4200 | Fee Income | INCOME | `incomeFromFeeAccountId` |
+| 4300 | Penalty Income | INCOME | `incomeFromPenaltyAccountId` |
+| 4400 | Recoveries Income | INCOME | `incomeFromRecoveryAccountId` |
+| 5100 | Loan Losses Written Off | EXPENSE | `writeOffAccountId` |
+
+- The mapped set is what Fineract 1.16.1 requires for cash accounting (`LoanProductDataValidator`). Fee, penalty, recovery and write-off accounts exist only because of that: the product has no fees or penalties, and nothing writes off loans yet.
+- One account per mapping, so every journal line in Fineract points at an account whose purpose is clear in the ERP.
+- `GL-1200` is the same account as the Part A simulation (`simulate_gl_sync.py`), so both scripts can run on the same stack.
+- Optional mappings (goodwill credit, charge-off) are left empty. Fineract allows that, and nothing in the brief uses them.
+
+## D-012: Loan product "SME Asset Finance"
+
+`shortName=SAF`. Every enum code below was checked against the 1.16.1 source (`AccountingRuleType`, `InterestMethod`, `AmortizationMethod`, `InterestCalculationPeriodMethod`, `PeriodFrequencyType`, `DaysInYearType`, `DaysInMonthType`, `RepaymentStartDateType`).
+
+| Setting | Value | Why |
+|---|---|---|
+| Currency | RWF, 0 decimals, multiples of 1 | D-009 |
+| Principal | min 100,000 / default 1,000,000 / max 50,000,000 RWF | Assumed SME asset-finance range; the brief sets none |
+| Interest | 18 per year (`interestRateFrequencyType=3`) | Brief |
+| Interest method | Declining balance (`interestType=0`) | Interest on the outstanding principal, the usual choice for asset finance. Flat would charge interest on principal already repaid |
+| Amortization | Equal installments (`amortizationType=1`) | Same payment every month, the usual choice for an SME borrower |
+| Interest period | Same as repayment period (`interestCalculationPeriodType=1`) | Simple, predictable schedule |
+| Repayments | 12, every 1 month (`repaymentFrequencyType=2`) | Brief |
+| Days in year / month | Actual / actual (`1` / `1`) | Fineract's default; with interest per repayment period it barely changes the schedule |
+| Repayment start | From disbursement date (`repaymentStartDateType=1`) | The first installment is due a month after the money goes out |
+| Repayment strategy | `mifos-standard-strategy` | Fineract's standard order: penalties, fees, interest, principal |
+| Multi-disbursement | Off (`multiDisburseLoan=false`) | Brief: one disbursement per loan |
+| Interest recalculation | Off | Not needed for cash accounting and a fixed schedule |
+| Charges | None | Brief: no fees, penalties or taxes (stretch item) |
+| Accounting | Cash, mappings from D-011 | D-010 |
+
+Bootstrap compares these fields and all 9 GL mappings on an existing product and stops on any difference.
+
+## D-013: Least-privilege API user
+
+Role `INTEGRATION_API` and user `integration-api` (office Kigali Main Office, `passwordNeverExpires`, no password e-mail). The password comes from `FINERACT_API_PASSWORD` in `.env`. The integration service uses only this user (`docker-compose.yml`).
+
+Permissions: exactly what the integration service needs for Parts A to D, and nothing else.
+
+| Permission | Used for |
+|---|---|
+| `READ_GLACCOUNT`, `SYNC_GLACCOUNT` | GL sync and lookup by reference (Part A) |
+| `READ_OFFICE` | Find Kigali Main Office by name for new clients |
+| `READ_LOANPRODUCT` | Find SME Asset Finance by short name |
+| `CREATE_CLIENT`, `READ_CLIENT` | Partner client onboarding, lookup by external id |
+| `CREATE_LOAN`, `APPROVE_LOAN`, `DISBURSE_LOAN`, `REPAYMENT_LOAN`, `READ_LOAN` | Loan lifecycle and live status |
+| `READ_JOURNALENTRY` | Reconciliation against Fineract's journal entries |
+
+Not granted: `ALL_FUNCTIONS` or `ALL_FUNCTIONS_READ`, any `UPDATE_*`, `DELETE_*` or undo command, and any admin of products, offices, users, roles, GL accounts or journal entries. Approve and disburse also run as this user: the integration service does them on the partner's behalf, and the brief has no human approver. A real deployment would put approval behind maker-checker.
+
+Bootstrap compares the role's permission set exactly. A role with one permission more or fewer stops the script.
+
+`scripts/verify_fineract_setup.py` checks this as the API user: it can read the office, the product and its GL mappings. It gets 403 on `POST /offices`, `/loanproducts`, `/users`, `/roles`, `/glaccounts` and `/journalentries`.
+
+**Known weaknesses.**
+- **Upstream gap: Fineract 1.16.1 does not authorize `PUT /currencies`.** `SecurityConfig` protects `POST /api/*/currencies` with `UPDATE_CURRENCY`, but the endpoint is `PUT`, and `CurrencyUpdateCommandHandler` has no permission check of its own. So **any** authenticated user, this one included, can replace the tenant's currency list. Found by the verify script: a test request as `integration-api` removed USD (put back by hand). Not fixed: rule 11 keeps our Java patch to GL accounts. Mitigation: the integration service never calls that endpoint. The verify script still reports the gap with a harmless probe (an unknown currency code, which the handler rejects without changing anything). The fix belongs upstream: match `PUT` in `SecurityConfig`.
+- The stock admin `mifos`/`password` is unchanged. Bootstrap needs it on a fresh Fineract. A real deployment would rotate it after bootstrap.
+- The user has a placeholder e-mail (`integration-api@integration.invalid`), because Fineract requires one when `sendPasswordToEmail` is false.
+- Bootstrap cannot check that an existing user's password matches `.env` (Fineract never returns it). It logs in as the user after the user step, so a wrong password fails there.

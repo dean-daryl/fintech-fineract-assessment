@@ -28,7 +28,10 @@ Every version below is pinned. Do not upgrade them without recording the change 
 ```bash
 cp .env.example .env      # then set real passwords
 make up                   # builds Fineract from source (first time ~10 min), starts all services, waits until healthy
+make bootstrap            # configures Fineract via its REST API: office, RWF, API user, GL accounts, loan product
 ```
+
+`make bootstrap` is safe to run again; a second run changes nothing (DECISIONS.md D-009).
 
 | Service | URL |
 |---|---|

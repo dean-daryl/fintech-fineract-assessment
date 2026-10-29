@@ -42,3 +42,27 @@ Every scenario is re-runnable against a running stack (`make up`). Logs are in `
 - **Expected:** pending while down, synced after recovery. **Actual:** as expected (`evidence/demo-gl-sync-failures.log`).
 - **Explanation:** a connection error is safe to retry, so the row stays pending with a backoff, and the recovery sweep picks it up.
 - **Note:** this one was run by hand, not from a script.
+
+## Part B evidence at a glance
+
+| What the brief asks | Command | Evidence |
+|---|---|---|
+| Office, RWF, loan product with synced GL accounts, API user | `make reset && make up && make evidence-bootstrap` | `evidence/bootstrap-run1.log` |
+| Bootstrap is get-or-create; second run changes nothing | same | `evidence/bootstrap-run2.log` |
+| Product terms and mappings; API user least privilege | same, or `make verify-fineract-setup` | `evidence/verify-fineract-setup.log` |
+
+## S-B1: Bootstrap twice on an empty Fineract
+
+- **Initial state:** stack from `make reset && make up`. Fineract has only its stock Head Office, USD and roles. ERP is empty.
+- **Request:** `scripts/bootstrap.py` twice.
+- **Expected:** run 1 creates the office, adds RWF, creates the role, the user, 9 ERP accounts and the product, and every GL account is `SYNCED`. Run 2 prints `exists, unchanged` for every step. Both exit 0.
+- **Actual:** pending a run on a fresh stack (`make evidence-bootstrap`). On a development stack that already had Part A data, run 1 created everything except `GL-1200` (already there from S-A2), and the next run reported every step unchanged.
+- **Also checked by hand:** with the product's interest changed to 20, or one extra permission on the role, bootstrap stops and lists the difference (`expected 20, found 18.0`) without changing Fineract.
+
+## S-B2: Least-privilege API user
+
+- **Initial state:** after S-B1.
+- **Request:** `scripts/verify_fineract_setup.py`, every call as `integration-api`.
+- **Expected:** reads Kigali Main Office and the SAF product (RWF, 18% per year, 12 monthly, single disbursement, cash), and each of the 9 mappings points at the GL account with the expected ERP reference. Gets 403 on 6 admin endpoints.
+- **Actual:** 18/18 PASS on the development stack. To be captured in `evidence/verify-fineract-setup.log` on a fresh stack.
+- **Known gap (reported, not counted):** `PUT /currencies` is not authorized by Fineract 1.16.1, so the probe gets past security (404 for an unknown code). See DECISIONS.md D-013.

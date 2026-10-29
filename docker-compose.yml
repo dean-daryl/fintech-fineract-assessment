@@ -71,8 +71,8 @@ services:
     environment:
       DATABASE_URL: postgresql://integration:${INTEGRATION_DB_PASSWORD:?set in .env}@db:5432/integration
       FINERACT_BASE_URL: https://fineract:8443/fineract-provider/api/v1
-      FINERACT_USERNAME: ${FINERACT_API_USERNAME:-mifos}
-      FINERACT_PASSWORD: ${FINERACT_API_PASSWORD:-password}
+      FINERACT_USERNAME: ${FINERACT_API_USERNAME:-integration-api}
+      FINERACT_PASSWORD: ${FINERACT_API_PASSWORD:?set in .env}
       # Fineract's image ships a self-signed certificate (see DECISIONS.md D-008)
       FINERACT_TLS_VERIFY: "false"
       ERP_BASE_URL: http://mock-erp:8000

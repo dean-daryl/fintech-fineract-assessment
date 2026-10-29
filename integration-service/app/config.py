@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     fineract_timeout_seconds: float = 10.0
 
     tenant_currency: str = "RWF"
+    fineract_office_name: str = "Kigali Main Office"
+    loan_product_short_name: str = "SAF"
 
     gl_sync_inline_attempts: int = 3
     gl_sync_max_attempts: int = 10

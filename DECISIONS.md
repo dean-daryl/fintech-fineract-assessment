@@ -8,7 +8,7 @@ Consequence: the tag's Gradle toolchain requires JDK 25 and Gradle 9.7.1 (wrappe
 
 ## D-002: Build Fineract inside Docker
 
-Fineract is compiled in a multi-stage Docker build on `eclipse-temurin:25.0.4.1_1-jdk`, so the stock and patched builds use the same toolchain on any machine. A local JDK 25 is still needed for `make test-java` and for work in the Fineract clone (which lives outside this repository).
+Fineract is compiled in a multi-stage Docker build on `eclipse-temurin:25.0.4.1_1-jdk`, so the stock and patched builds use the same toolchain on any machine. A local JDK 25 is still needed for `make test-java` and for work in the Fineract clone (`fineract-src/`, gitignored).
 
 ## D-003: One PostgreSQL server, one database per service
 
@@ -24,10 +24,10 @@ Known weakness: one server is a shared failure point. Acceptable for an assessme
 
 ## D-005: How patches reach the image
 
-- The Java change is committed in a Fineract clone outside this repo and exported with `git format-patch <tag>` into `fineract-customization/patch/`. Only those files are committed here.
+- The Java change is committed in a Fineract clone at `fineract-src/` (gitignored, so it is never committed here; kept inside the project so it opens alongside it in the IDE) and exported with `git format-patch <tag>` into `fineract-customization/patch/`. Only those files are committed here.
 - The Dockerfile applies them with `git apply --index`, not `git am`: `git am` needs a committer identity inside the container and adds nothing to the image. Consequence: the jar's `git.properties` still reports the tag's commit, so the image is identified by tag + patch files, not by a commit hash of our own.
 - Patches apply in file-name order and the build fails on the first one that does not apply cleanly, so an image can never silently lack part of the change.
-- `make build-fineract` regenerates the patches from the clone when one exists (`FINERACT_SRC`, default `../fineract`) and otherwise uses the committed ones, so graders need no clone. `--no-signature` keeps regenerated files stable across git versions.
+- `make build-fineract` regenerates the patches from the clone when one exists (`FINERACT_SRC`, default `fineract-src`) and otherwise uses the committed ones, so graders need no clone. `--no-signature` keeps regenerated files stable across git versions.
 
 ## D-006: Compose stack configuration
 
@@ -37,3 +37,32 @@ Known weakness: one server is a shared failure point. Acceptable for an assessme
 - Postgres is published on host port 5433 (`DB_HOST_PORT`) so it does not clash with a local postgres on 5432. Services use `db:5432` internally.
 - `integration-service` starts only after Fineract and the ERP are healthy, since it is the only service that calls them.
 - `make up` uses `docker compose up --wait` with a 15-minute timeout because Fineract's first boot runs every Liquibase changeset.
+
+## D-007: GL account sync in Fineract (Java patch)
+
+**What 1.16.1 lacks.** GL accounts have no field for an external reference. `gl_code` is unique, but it's Fineract's own code, not the ERP's ID. So the patch adds the reference and the sync behaviour.
+
+**What the patch adds.**
+- A column `acc_gl_account.external_reference`, unique, added by a Liquibase changeset (`0270`).
+- A new endpoint `POST /glaccounts/sync`, protected by a new permission `SYNC_GLACCOUNT`.
+- A lookup `GET /glaccounts/external-reference/{ref}`, so the integration service can check before retrying.
+
+**How sync behaves.**
+
+| Request | Result |
+|---|---|
+| New reference | Account created |
+| Same reference, same details | Existing account returned, nothing created |
+| Same reference, different details | 409 |
+| New reference, but `glCode` already taken | 409 (never adopts an existing account) |
+
+**Why a new command, not a new controller.** It runs through Fineract's normal command pipeline, so permissions, audit log and transactions work the same as the stock create. The stock `POST /glaccounts` is unchanged.
+
+**Concurrent requests.** If two identical syncs race, the database unique constraint stops the second insert. Fineract's built-in command retry then re-runs it, finds the first account and returns it. No duplicate, no 500.
+
+**Not Fineract's job.** Mapping ERP types (`"ASSET"` → `1`) and checking currency happen in the integration service. Fineract GL accounts have no currency.
+
+**Known weaknesses.**
+- Constraint violations are recognised by name in the database error message, the same way stock Fineract does it. Renaming the constraint would break this.
+- The response doesn't say whether the account was created or already existed.
+- The reference can't be changed after creation. That's on purpose, since sync is create-only.

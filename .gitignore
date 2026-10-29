@@ -5,3 +5,5 @@ __pycache__/
 .idea/
 .DS_Store
 evidence/build-fineract.log
+fineract-src/
+fineract-src/

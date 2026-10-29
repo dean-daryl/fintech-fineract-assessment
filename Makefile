@@ -3,11 +3,28 @@ SHELL := /bin/bash
 FINERACT_IMAGE ?= fineract-custom:local
 BUILD_LOG ?= evidence/build-fineract.log
 DOCKER_BUILD_FLAGS ?=
+# Fineract clone used to produce the patches; lives outside this repository.
+FINERACT_SRC ?= ../fineract
+FINERACT_TAG := $(shell sed -n 's/^ARG FINERACT_TAG=//p' fineract-customization/Dockerfile)
+PATCH_DIR := $(CURDIR)/fineract-customization/patch
 
-.PHONY: build-fineract
+.PHONY: build-fineract patches
+
+# Regenerates patch/*.patch from commits on top of FINERACT_TAG in the clone.
+# Without a clone (e.g. a grader's machine) the committed patches are used as-is.
+patches:
+	@if [ -d "$(FINERACT_SRC)/.git" ]; then \
+	  if [ -n "$$(git -C $(FINERACT_SRC) status --porcelain)" ]; then \
+	    echo "WARNING: $(FINERACT_SRC) has uncommitted changes; they are NOT in the patches"; \
+	  fi; \
+	  rm -f $(PATCH_DIR)/*.patch; \
+	  git -C $(FINERACT_SRC) format-patch --no-signature $(FINERACT_TAG) -o $(PATCH_DIR); \
+	  echo "Patches: $$(ls $(PATCH_DIR)/*.patch 2>/dev/null | wc -l | tr -d ' ') from $(FINERACT_SRC) on $(FINERACT_TAG)"; \
+	else \
+	  echo "No Fineract clone at $(FINERACT_SRC): using committed patches"; \
+	fi
 
 # pipefail is set inside the recipe: macOS ships GNU Make 3.81, which ignores .SHELLFLAGS.
-# Phase 3 adds patch regeneration from the Fineract clone before the build.
-build-fineract:
+build-fineract: patches
 	set -o pipefail; DOCKER_BUILDKIT=1 docker build --progress=plain --load $(DOCKER_BUILD_FLAGS) \
 		-t $(FINERACT_IMAGE) fineract-customization 2>&1 | tee $(BUILD_LOG)

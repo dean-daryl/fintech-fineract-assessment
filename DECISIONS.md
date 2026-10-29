@@ -21,3 +21,10 @@ Known weakness: one server is a shared failure point. Acceptable for an assessme
 - Only `:fineract-provider:bootJar` is built, skipping tests (`-x test -x cucumber`). `buildJavaSdk` is deliberately not skipped: it generates the Avro classes `fineract-core` needs. Upstream's Docker CI skips it only because it reuses a pre-built workspace; copying that exclusion broke our first clean build. Fineract's own test suite is not run in the image build; our patch's tests run separately via `make test-java`.
 - The tag's `gradle.properties` requests a 12 GB Gradle heap. The build overrides only the heap (`GRADLE_XMX`, default 4g) and caps workers at 2, so it fits an 8 GB Docker Desktop. The other JVM flags from the tag are kept unchanged.
 - The image runs the jar with `java -jar` on Temurin 25 JRE as user `nobody`, with the same JVM flags as the tag's Jib config. We do not use Jib, because the Dockerfile must apply our patches between clone and build.
+
+## D-005: How patches reach the image
+
+- The Java change is committed in a Fineract clone outside this repo and exported with `git format-patch <tag>` into `fineract-customization/patch/`. Only those files are committed here.
+- The Dockerfile applies them with `git apply --index`, not `git am`: `git am` needs a committer identity inside the container and adds nothing to the image. Consequence: the jar's `git.properties` still reports the tag's commit, so the image is identified by tag + patch files, not by a commit hash of our own.
+- Patches apply in file-name order and the build fails on the first one that does not apply cleanly, so an image can never silently lack part of the change.
+- `make build-fineract` regenerates the patches from the clone when one exists (`FINERACT_SRC`, default `../fineract`) and otherwise uses the committed ones, so graders need no clone. `--no-signature` keeps regenerated files stable across git versions.

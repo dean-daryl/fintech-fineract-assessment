@@ -1,0 +1,76 @@
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 3.03kB done
+#1 DONE 0.0s
+
+#2 resolve image config for docker-image://docker.io/docker/dockerfile:1
+#2 DONE 1.0s
+
+#3 docker-image://docker.io/docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
+#3 CACHED
+
+#4 [internal] load metadata for docker.io/library/eclipse-temurin:25.0.4.1_1-jdk
+#4 ...
+
+#5 [internal] load metadata for docker.io/library/eclipse-temurin:25.0.4.1_1-jre
+#5 DONE 0.8s
+
+#4 [internal] load metadata for docker.io/library/eclipse-temurin:25.0.4.1_1-jdk
+#4 DONE 0.8s
+
+#6 [internal] load .dockerignore
+#6 transferring context: 2B done
+#6 DONE 0.0s
+
+#7 [builder 1/7] FROM docker.io/library/eclipse-temurin:25.0.4.1_1-jdk@sha256:3ab7fc8d0b4ade8fef96903fb36767c1dbb4fd1535dcfad85b59c17afbbb5857
+#7 DONE 0.0s
+
+#8 [stage-1 1/4] FROM docker.io/library/eclipse-temurin:25.0.4.1_1-jre@sha256:78f1f183913482ef390c2722f46c3f0ce76ada341d69590e7c482ec943ee72d5
+#8 DONE 0.0s
+
+#9 [internal] load build context
+#9 transferring context: 1.14kB done
+#9 DONE 0.0s
+
+#10 [builder 3/7] WORKDIR /src
+#10 CACHED
+
+#11 [builder 2/7] RUN apt-get update  && apt-get install -y --no-install-recommends git  && rm -rf /var/lib/apt/lists/*
+#11 CACHED
+
+#12 [builder 4/7] RUN git clone --depth 1 --branch "1.16.1" https://github.com/apache/fineract.git .  && actual="$(git rev-parse HEAD)"  && echo "Fineract 1.16.1 at commit ${actual}"  && if [ "${actual}" != "c643dab306fe29798951591ce825fd5e5272923e" ]; then       echo "ERROR: tag 1.16.1 is ${actual}, expected c643dab306fe29798951591ce825fd5e5272923e" >&2; exit 1;     fi
+#12 CACHED
+
+#13 [builder 5/7] COPY patch/ /patches/
+#13 DONE 0.2s
+
+#14 [builder 6/7] RUN set -e;     applied=0;     for p in $(ls /patches/*.patch 2>/dev/null | sort); do       echo "Applying $(basename "$p")";       git apply --index "$p";       applied=$((applied + 1));     done;     if [ "$applied" -eq 0 ]; then       echo "No patches in patch/: building stock Fineract 1.16.1";     else       echo "Applied ${applied} patch(es)"; git status --short;     fi
+#14 0.131 Applying 0001-test-patch-pipeline-marker-throwaway.patch
+#14 0.139 error: patch failed: fineract-provider/src/main/resources/application.properties:920
+#14 0.139 error: fineract-provider/src/main/resources/application.properties: patch does not apply
+#14 ERROR: process "/bin/sh -c set -e;     applied=0;     for p in $(ls /patches/*.patch 2>/dev/null | sort); do       echo \"Applying $(basename \"$p\")\";       git apply --index \"$p\";       applied=$((applied + 1));     done;     if [ \"$applied\" -eq 0 ]; then       echo \"No patches in patch/: building stock Fineract ${FINERACT_TAG}\";     else       echo \"Applied ${applied} patch(es)\"; git status --short;     fi" did not complete successfully: exit code: 1
+------
+ > [builder 6/7] RUN set -e;     applied=0;     for p in $(ls /patches/*.patch 2>/dev/null | sort); do       echo "Applying $(basename "$p")";       git apply --index "$p";       applied=$((applied + 1));     done;     if [ "$applied" -eq 0 ]; then       echo "No patches in patch/: building stock Fineract 1.16.1";     else       echo "Applied ${applied} patch(es)"; git status --short;     fi:
+0.131 Applying 0001-test-patch-pipeline-marker-throwaway.patch
+0.139 error: patch failed: fineract-provider/src/main/resources/application.properties:920
+0.139 error: fineract-provider/src/main/resources/application.properties: patch does not apply
+------
+Dockerfile:32
+--------------------
+  31 |     COPY patch/ /patches/
+  32 | >>> RUN set -e; \
+  33 | >>>     applied=0; \
+  34 | >>>     for p in $(ls /patches/*.patch 2>/dev/null | sort); do \
+  35 | >>>       echo "Applying $(basename "$p")"; \
+  36 | >>>       git apply --index "$p"; \
+  37 | >>>       applied=$((applied + 1)); \
+  38 | >>>     done; \
+  39 | >>>     if [ "$applied" -eq 0 ]; then \
+  40 | >>>       echo "No patches in patch/: building stock Fineract ${FINERACT_TAG}"; \
+  41 | >>>     else \
+  42 | >>>       echo "Applied ${applied} patch(es)"; git status --short; \
+  43 | >>>     fi
+  44 |     
+--------------------
+ERROR: failed to solve: process "/bin/sh -c set -e;     applied=0;     for p in $(ls /patches/*.patch 2>/dev/null | sort); do       echo \"Applying $(basename \"$p\")\";       git apply --index \"$p\";       applied=$((applied + 1));     done;     if [ \"$applied\" -eq 0 ]; then       echo \"No patches in patch/: building stock Fineract ${FINERACT_TAG}\";     else       echo \"Applied ${applied} patch(es)\"; git status --short;     fi" did not complete successfully: exit code: 1

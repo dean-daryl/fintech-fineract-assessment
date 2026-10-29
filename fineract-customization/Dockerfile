@@ -26,7 +26,21 @@ RUN git clone --depth 1 --branch "${FINERACT_TAG}" https://github.com/apache/fin
       echo "ERROR: tag ${FINERACT_TAG} is ${actual}, expected ${FINERACT_COMMIT}" >&2; exit 1; \
     fi
 
-# Phase 3: apply patch/*.patch here.
+# Apply patch/*.patch in name order (git format-patch numbers them 0001-, 0002-, ...).
+# A patch that does not apply cleanly fails the build here, before Gradle runs.
+COPY patch/ /patches/
+RUN set -e; \
+    applied=0; \
+    for p in $(ls /patches/*.patch 2>/dev/null | sort); do \
+      echo "Applying $(basename "$p")"; \
+      git apply --index "$p"; \
+      applied=$((applied + 1)); \
+    done; \
+    if [ "$applied" -eq 0 ]; then \
+      echo "No patches in patch/: building stock Fineract ${FINERACT_TAG}"; \
+    else \
+      echo "Applied ${applied} patch(es)"; git status --short; \
+    fi
 
 # Skip tests only. buildJavaSdk must run: it generates the Avro classes fineract-core needs.
 RUN --mount=type=cache,target=/root/.gradle \

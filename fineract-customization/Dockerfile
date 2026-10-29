@@ -28,12 +28,12 @@ RUN git clone --depth 1 --branch "${FINERACT_TAG}" https://github.com/apache/fin
 
 # Phase 3: apply patch/*.patch here.
 
-# Same task exclusions as upstream's Docker CI (build-docker.yml at this tag).
+# Skip tests only. buildJavaSdk must run: it generates the Avro classes fineract-core needs.
 RUN --mount=type=cache,target=/root/.gradle \
     jvmargs="$(grep '^org.gradle.jvmargs=' gradle.properties | cut -d= -f2- | sed "s/-Xmx[0-9]*[gGmM]/-Xmx${GRADLE_XMX}/")" \
  && ./gradlew --no-daemon --console=plain --max-workers="${GRADLE_MAX_WORKERS}" \
       -Dorg.gradle.jvmargs="${jvmargs}" \
-      :fineract-provider:bootJar -x test -x cucumber -x buildJavaSdk \
+      :fineract-provider:bootJar -x test -x cucumber \
  && jar="$(ls fineract-provider/build/libs/fineract-provider-*.jar | grep -v -- '-plain.jar$')" \
  && cp "${jar}" /fineract-provider.jar \
  && echo "Built ${jar}"

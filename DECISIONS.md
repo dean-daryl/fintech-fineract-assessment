@@ -18,6 +18,6 @@ Known weakness: one server is a shared failure point. Acceptable for an assessme
 
 ## D-004: Fineract image build settings
 
-- Only `:fineract-provider:bootJar` is built, with upstream's Docker CI exclusions (`-x test -x cucumber -x buildJavaSdk`). Fineract's own test suite is not run in the image build; our patch's tests run separately via `make test-java`.
+- Only `:fineract-provider:bootJar` is built, skipping tests (`-x test -x cucumber`). `buildJavaSdk` is deliberately not skipped: it generates the Avro classes `fineract-core` needs. Upstream's Docker CI skips it only because it reuses a pre-built workspace; copying that exclusion broke our first clean build. Fineract's own test suite is not run in the image build; our patch's tests run separately via `make test-java`.
 - The tag's `gradle.properties` requests a 12 GB Gradle heap. The build overrides only the heap (`GRADLE_XMX`, default 4g) and caps workers at 2, so it fits an 8 GB Docker Desktop. The other JVM flags from the tag are kept unchanged.
 - The image runs the jar with `java -jar` on Temurin 25 JRE as user `nobody`, with the same JVM flags as the tag's Jib config. We do not use Jib, because the Dockerfile must apply our patches between clone and build.

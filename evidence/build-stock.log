@@ -1,568 +1,1004 @@
 #0 building with "desktop-linux" instance using docker driver
 
 #1 [internal] load build definition from Dockerfile
-#1 transferring dockerfile: 3.00kB 0.0s done
-#1 DONE 0.1s
+#1 transferring dockerfile: 2.47kB done
+#1 DONE 0.0s
 
 #2 resolve image config for docker-image://docker.io/docker/dockerfile:1
-#2 DONE 2.5s
+#2 DONE 0.9s
 
 #3 docker-image://docker.io/docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
-#3 resolve docker.io/docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e done
-#3 sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e 9.08kB / 9.08kB done
-#3 sha256:e291cde6b1429712d3951bca77be92338719212df6654812f1a55874a481742d 1.13kB / 1.13kB done
-#3 sha256:6fd0aed5103f5db618989de6a2a3e801d8bd77dd60aee7194a696544ae33fe0a 1.41kB / 1.41kB done
-#3 sha256:c3fba84503b044ce5cd182dd0150892f3b0eff1350c4c5d7f5ca2066da594550 0B / 13.13MB 0.1s
-#3 sha256:c3fba84503b044ce5cd182dd0150892f3b0eff1350c4c5d7f5ca2066da594550 3.15MB / 13.13MB 0.6s
-#3 sha256:c3fba84503b044ce5cd182dd0150892f3b0eff1350c4c5d7f5ca2066da594550 8.39MB / 13.13MB 0.8s
-#3 sha256:c3fba84503b044ce5cd182dd0150892f3b0eff1350c4c5d7f5ca2066da594550 12.58MB / 13.13MB 1.0s
-#3 sha256:c3fba84503b044ce5cd182dd0150892f3b0eff1350c4c5d7f5ca2066da594550 13.13MB / 13.13MB 1.2s done
-#3 extracting sha256:c3fba84503b044ce5cd182dd0150892f3b0eff1350c4c5d7f5ca2066da594550 0.1s
-#3 extracting sha256:c3fba84503b044ce5cd182dd0150892f3b0eff1350c4c5d7f5ca2066da594550 0.3s done
-#3 DONE 1.5s
+#3 CACHED
 
 #4 [internal] load metadata for docker.io/library/eclipse-temurin:25.0.4.1_1-jre
-#4 DONE 2.3s
+#4 ...
 
 #5 [internal] load metadata for docker.io/library/eclipse-temurin:25.0.4.1_1-jdk
-#5 DONE 2.3s
+#5 DONE 0.8s
+
+#4 [internal] load metadata for docker.io/library/eclipse-temurin:25.0.4.1_1-jre
+#4 DONE 0.8s
 
 #6 [internal] load .dockerignore
 #6 transferring context: 2B done
 #6 DONE 0.0s
 
 #7 [builder 1/5] FROM docker.io/library/eclipse-temurin:25.0.4.1_1-jdk@sha256:3ab7fc8d0b4ade8fef96903fb36767c1dbb4fd1535dcfad85b59c17afbbb5857
-#7 resolve docker.io/library/eclipse-temurin:25.0.4.1_1-jdk@sha256:3ab7fc8d0b4ade8fef96903fb36767c1dbb4fd1535dcfad85b59c17afbbb5857 done
-#7 sha256:6f01cc7d6fb3d703f324d1ccddfddeaa2e8c97cf4b5d6936a66396eaf4089d99 0B / 388B 0.1s
-#7 sha256:c8ccec099a062d0877993297e6b77bdc03b4d61c4c3391446de9b638a4ae2c75 2.14kB / 2.14kB done
-#7 sha256:efb6a75c707cc7d4e4cd8402daba23eab8ed3f8b5a03a41cc7b5ff63111809cf 9.43kB / 9.43kB done
-#7 sha256:3ab7fc8d0b4ade8fef96903fb36767c1dbb4fd1535dcfad85b59c17afbbb5857 5.92kB / 5.92kB done
-#7 sha256:afa7f7d582de8ee3433df193ede10fc2c50d3398de31c14d329b643e7a69b852 0B / 41.12MB 0.1s
-#7 sha256:6f01cc7d6fb3d703f324d1ccddfddeaa2e8c97cf4b5d6936a66396eaf4089d99 388B / 388B 0.3s done
-#7 sha256:afa7f7d582de8ee3433df193ede10fc2c50d3398de31c14d329b643e7a69b852 2.10MB / 41.12MB 0.6s
-#7 sha256:afa7f7d582de8ee3433df193ede10fc2c50d3398de31c14d329b643e7a69b852 4.19MB / 41.12MB 0.8s
-#7 sha256:afa7f7d582de8ee3433df193ede10fc2c50d3398de31c14d329b643e7a69b852 9.44MB / 41.12MB 1.0s
-#7 sha256:afa7f7d582de8ee3433df193ede10fc2c50d3398de31c14d329b643e7a69b852 13.63MB / 41.12MB 1.3s
-#7 sha256:afa7f7d582de8ee3433df193ede10fc2c50d3398de31c14d329b643e7a69b852 17.83MB / 41.12MB 1.5s
-#7 sha256:afa7f7d582de8ee3433df193ede10fc2c50d3398de31c14d329b643e7a69b852 22.02MB / 41.12MB 1.8s
-#7 sha256:afa7f7d582de8ee3433df193ede10fc2c50d3398de31c14d329b643e7a69b852 24.12MB / 41.12MB 1.9s
-#7 sha256:afa7f7d582de8ee3433df193ede10fc2c50d3398de31c14d329b643e7a69b852 27.05MB / 41.12MB 2.1s
-#7 sha256:afa7f7d582de8ee3433df193ede10fc2c50d3398de31c14d329b643e7a69b852 31.46MB / 41.12MB 2.4s
-#7 sha256:afa7f7d582de8ee3433df193ede10fc2c50d3398de31c14d329b643e7a69b852 33.55MB / 41.12MB 2.6s
-#7 sha256:afa7f7d582de8ee3433df193ede10fc2c50d3398de31c14d329b643e7a69b852 36.70MB / 41.12MB 2.8s
-#7 sha256:afa7f7d582de8ee3433df193ede10fc2c50d3398de31c14d329b643e7a69b852 40.93MB / 41.12MB 3.1s
-#7 sha256:afa7f7d582de8ee3433df193ede10fc2c50d3398de31c14d329b643e7a69b852 41.12MB / 41.12MB 3.1s done
-#7 sha256:4f4fb700ef54461cfa02571ae0db9a0dc1e0cdb5577484a6d75e68dc38e8acc1 0B / 32B 3.2s
-#7 extracting sha256:afa7f7d582de8ee3433df193ede10fc2c50d3398de31c14d329b643e7a69b852 0.1s
-#7 sha256:4f4fb700ef54461cfa02571ae0db9a0dc1e0cdb5577484a6d75e68dc38e8acc1 32B / 32B 3.4s done
-#7 sha256:b9c58d446b7fca770f5f7d19731cec9100de544726f2472e790fee7005a19ec8 0B / 16.09MB 3.7s
-#7 sha256:a98ce42be3de270e48945d3bed85ef1f1c089abc02e6bbc1e4e28447f1b8bbc6 0B / 91.66MB 3.7s
-#7 sha256:b9c58d446b7fca770f5f7d19731cec9100de544726f2472e790fee7005a19ec8 1.72MB / 16.09MB 4.2s
-#7 sha256:b9c58d446b7fca770f5f7d19731cec9100de544726f2472e790fee7005a19ec8 3.15MB / 16.09MB 4.4s
-#7 sha256:b9c58d446b7fca770f5f7d19731cec9100de544726f2472e790fee7005a19ec8 4.19MB / 16.09MB 4.6s
-#7 sha256:b9c58d446b7fca770f5f7d19731cec9100de544726f2472e790fee7005a19ec8 5.24MB / 16.09MB 4.7s
-#7 sha256:b9c58d446b7fca770f5f7d19731cec9100de544726f2472e790fee7005a19ec8 6.29MB / 16.09MB 4.8s
-#7 sha256:b9c58d446b7fca770f5f7d19731cec9100de544726f2472e790fee7005a19ec8 7.34MB / 16.09MB 5.0s
-#7 sha256:a98ce42be3de270e48945d3bed85ef1f1c089abc02e6bbc1e4e28447f1b8bbc6 4.80MB / 91.66MB 5.0s
-#7 sha256:b9c58d446b7fca770f5f7d19731cec9100de544726f2472e790fee7005a19ec8 8.39MB / 16.09MB 5.1s
-#7 sha256:b9c58d446b7fca770f5f7d19731cec9100de544726f2472e790fee7005a19ec8 9.44MB / 16.09MB 5.2s
-#7 sha256:b9c58d446b7fca770f5f7d19731cec9100de544726f2472e790fee7005a19ec8 10.49MB / 16.09MB 5.3s
-#7 sha256:b9c58d446b7fca770f5f7d19731cec9100de544726f2472e790fee7005a19ec8 12.58MB / 16.09MB 5.6s
-#7 sha256:b9c58d446b7fca770f5f7d19731cec9100de544726f2472e790fee7005a19ec8 13.63MB / 16.09MB 5.7s
-#7 sha256:b9c58d446b7fca770f5f7d19731cec9100de544726f2472e790fee7005a19ec8 14.68MB / 16.09MB 5.9s
-#7 sha256:a98ce42be3de270e48945d3bed85ef1f1c089abc02e6bbc1e4e28447f1b8bbc6 9.44MB / 91.66MB 5.9s
-#7 sha256:b9c58d446b7fca770f5f7d19731cec9100de544726f2472e790fee7005a19ec8 16.09MB / 16.09MB 6.0s done
-#7 sha256:a975d3090edd3d756fd13934f0e84763a4ce86ec30660902571029714184854f 0B / 2.46kB 6.0s
-#7 sha256:a975d3090edd3d756fd13934f0e84763a4ce86ec30660902571029714184854f 2.46kB / 2.46kB 6.2s done
-#7 sha256:a98ce42be3de270e48945d3bed85ef1f1c089abc02e6bbc1e4e28447f1b8bbc6 14.68MB / 91.66MB 6.5s
-#7 sha256:a98ce42be3de270e48945d3bed85ef1f1c089abc02e6bbc1e4e28447f1b8bbc6 19.92MB / 91.66MB 6.9s
-#7 extracting sha256:6f01cc7d6fb3d703f324d1ccddfddeaa2e8c97cf4b5d6936a66396eaf4089d99
-#7 extracting sha256:b9c58d446b7fca770f5f7d19731cec9100de544726f2472e790fee7005a19ec8
-#7 sha256:a98ce42be3de270e48945d3bed85ef1f1c089abc02e6bbc1e4e28447f1b8bbc6 25.17MB / 91.66MB 7.3s
-#7 sha256:a98ce42be3de270e48945d3bed85ef1f1c089abc02e6bbc1e4e28447f1b8bbc6 31.46MB / 91.66MB 7.6s
-#7 sha256:a98ce42be3de270e48945d3bed85ef1f1c089abc02e6bbc1e4e28447f1b8bbc6 38.80MB / 91.66MB 7.9s
-#7 sha256:a98ce42be3de270e48945d3bed85ef1f1c089abc02e6bbc1e4e28447f1b8bbc6 44.04MB / 91.66MB 8.1s
-#7 extracting sha256:b9c58d446b7fca770f5f7d19731cec9100de544726f2472e790fee7005a19ec8 1.0s done
-#7 sha256:a98ce42be3de270e48945d3bed85ef1f1c089abc02e6bbc1e4e28447f1b8bbc6 51.38MB / 91.66MB 8.4s
-#7 ...
+#7 DONE 0.0s
 
 #8 [stage-1 1/4] FROM docker.io/library/eclipse-temurin:25.0.4.1_1-jre@sha256:78f1f183913482ef390c2722f46c3f0ce76ada341d69590e7c482ec943ee72d5
-#8 resolve docker.io/library/eclipse-temurin:25.0.4.1_1-jre@sha256:78f1f183913482ef390c2722f46c3f0ce76ada341d69590e7c482ec943ee72d5 done
-#8 sha256:78f1f183913482ef390c2722f46c3f0ce76ada341d69590e7c482ec943ee72d5 5.92kB / 5.92kB done
-#8 sha256:705b48fc8a90258d8ff9183934776341eb31fc4c8fddb54eaafd9ba5717accf9 9.04kB / 9.04kB done
-#8 sha256:2434982eb9697f69cedd18da6d795b4dccb24081f934528d15cbd92659b3dde9 2.14kB / 2.14kB done
-#8 sha256:afa7f7d582de8ee3433df193ede10fc2c50d3398de31c14d329b643e7a69b852 41.12MB / 41.12MB 3.1s done
-#8 sha256:6f01cc7d6fb3d703f324d1ccddfddeaa2e8c97cf4b5d6936a66396eaf4089d99 388B / 388B 0.3s done
-#8 sha256:af1c280fe5fb98a7c2966fe55cf93fc37617281ae248eb6c28ebd1e39f3b1fd6 12.11MB / 12.11MB 3.7s done
-#8 sha256:2ae025f5cf29bb8aa8ed72fbff480c7eed1286d19afe1f555d32c1d9a955a1f4 61.93MB / 61.93MB 7.2s done
-#8 sha256:4f4fb700ef54461cfa02571ae0db9a0dc1e0cdb5577484a6d75e68dc38e8acc1 32B / 32B 3.4s done
-#8 extracting sha256:afa7f7d582de8ee3433df193ede10fc2c50d3398de31c14d329b643e7a69b852 3.8s done
-#8 sha256:d72d8405b3fce2d9ea155e7e6e786e04b8d036e61a3d9be9cb54696066b70b83 2.46kB / 2.46kB 3.7s done
-#8 extracting sha256:6f01cc7d6fb3d703f324d1ccddfddeaa2e8c97cf4b5d6936a66396eaf4089d99 done
-#8 extracting sha256:af1c280fe5fb98a7c2966fe55cf93fc37617281ae248eb6c28ebd1e39f3b1fd6 0.7s done
-#8 extracting sha256:2ae025f5cf29bb8aa8ed72fbff480c7eed1286d19afe1f555d32c1d9a955a1f4 0.6s
-#8 extracting sha256:2ae025f5cf29bb8aa8ed72fbff480c7eed1286d19afe1f555d32c1d9a955a1f4 0.9s done
-#8 extracting sha256:4f4fb700ef54461cfa02571ae0db9a0dc1e0cdb5577484a6d75e68dc38e8acc1 done
-#8 extracting sha256:d72d8405b3fce2d9ea155e7e6e786e04b8d036e61a3d9be9cb54696066b70b83 done
-#8 DONE 8.9s
+#8 DONE 0.0s
+
+#8 [stage-1 1/4] FROM docker.io/library/eclipse-temurin:25.0.4.1_1-jre@sha256:78f1f183913482ef390c2722f46c3f0ce76ada341d69590e7c482ec943ee72d5
+#8 CACHED
 
 #7 [builder 1/5] FROM docker.io/library/eclipse-temurin:25.0.4.1_1-jdk@sha256:3ab7fc8d0b4ade8fef96903fb36767c1dbb4fd1535dcfad85b59c17afbbb5857
-#7 sha256:a98ce42be3de270e48945d3bed85ef1f1c089abc02e6bbc1e4e28447f1b8bbc6 59.77MB / 91.66MB 8.8s
-#7 sha256:a98ce42be3de270e48945d3bed85ef1f1c089abc02e6bbc1e4e28447f1b8bbc6 66.06MB / 91.66MB 9.1s
-#7 sha256:a98ce42be3de270e48945d3bed85ef1f1c089abc02e6bbc1e4e28447f1b8bbc6 72.35MB / 91.66MB 9.4s
-#7 sha256:a98ce42be3de270e48945d3bed85ef1f1c089abc02e6bbc1e4e28447f1b8bbc6 77.59MB / 91.66MB 9.7s
-#7 sha256:a98ce42be3de270e48945d3bed85ef1f1c089abc02e6bbc1e4e28447f1b8bbc6 84.93MB / 91.66MB 10.0s
-#7 sha256:a98ce42be3de270e48945d3bed85ef1f1c089abc02e6bbc1e4e28447f1b8bbc6 91.23MB / 91.66MB 10.3s
-#7 sha256:a98ce42be3de270e48945d3bed85ef1f1c089abc02e6bbc1e4e28447f1b8bbc6 91.66MB / 91.66MB 10.4s done
-#7 extracting sha256:a98ce42be3de270e48945d3bed85ef1f1c089abc02e6bbc1e4e28447f1b8bbc6
-#7 extracting sha256:a98ce42be3de270e48945d3bed85ef1f1c089abc02e6bbc1e4e28447f1b8bbc6 1.1s done
-#7 extracting sha256:4f4fb700ef54461cfa02571ae0db9a0dc1e0cdb5577484a6d75e68dc38e8acc1 done
-#7 extracting sha256:a975d3090edd3d756fd13934f0e84763a4ce86ec30660902571029714184854f done
-#7 DONE 11.8s
+#7 CACHED
 
 #9 [builder 2/5] RUN apt-get update  && apt-get install -y --no-install-recommends git  && rm -rf /var/lib/apt/lists/*
-#9 0.486 Get:1 http://ports.ubuntu.com/ubuntu-ports resolute InRelease [136 kB]
-#9 1.333 Get:2 http://ports.ubuntu.com/ubuntu-ports resolute-updates InRelease [137 kB]
-#9 1.681 Get:3 http://ports.ubuntu.com/ubuntu-ports resolute-backports InRelease [137 kB]
-#9 1.978 Get:4 http://ports.ubuntu.com/ubuntu-ports resolute-security InRelease [137 kB]
-#9 2.271 Get:5 http://ports.ubuntu.com/ubuntu-ports resolute/universe arm64 Packages [19.9 MB]
-#9 3.913 Get:6 http://ports.ubuntu.com/ubuntu-ports resolute/restricted arm64 Packages [231 kB]
-#9 3.915 Get:7 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 Packages [1,860 kB]
-#9 3.992 Get:8 http://ports.ubuntu.com/ubuntu-ports resolute/multiverse arm64 Packages [298 kB]
-#9 4.009 Get:9 http://ports.ubuntu.com/ubuntu-ports resolute-updates/restricted arm64 Packages [915 kB]
-#9 4.048 Get:10 http://ports.ubuntu.com/ubuntu-ports resolute-updates/multiverse arm64 Packages [26.3 kB]
-#9 4.049 Get:11 http://ports.ubuntu.com/ubuntu-ports resolute-updates/universe arm64 Packages [464 kB]
-#9 4.071 Get:12 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 Packages [1,032 kB]
-#9 4.120 Get:13 http://ports.ubuntu.com/ubuntu-ports resolute-backports/universe arm64 Packages [3,309 B]
-#9 4.120 Get:14 http://ports.ubuntu.com/ubuntu-ports resolute-security/main arm64 Packages [771 kB]
-#9 4.154 Get:15 http://ports.ubuntu.com/ubuntu-ports resolute-security/multiverse arm64 Packages [24.5 kB]
-#9 4.155 Get:16 http://ports.ubuntu.com/ubuntu-ports resolute-security/restricted arm64 Packages [813 kB]
-#9 4.189 Get:17 http://ports.ubuntu.com/ubuntu-ports resolute-security/universe arm64 Packages [254 kB]
-#9 4.622 Fetched 27.2 MB in 5s (6,016 kB/s)
-#9 4.622 Reading package lists...
-#9 5.194 Reading package lists...
-#9 5.701 Building dependency tree...
-#9 5.845 Reading state information...
-#9 5.877 Solving dependencies...
-#9 6.044 The following additional packages will be installed:
-#9 6.044   git-man libcurl3t64-gnutls liberror-perl libgdbm-compat4t64 libgdbm6t64
-#9 6.044   libgnutls30t64 libgssapi-krb5-2 libhogweed6t64 libidn2-0 libk5crypto3
-#9 6.044   libkeyutils1 libkrb5-3 libkrb5support0 libldap-common libldap2 libnettle8t64
-#9 6.045   libnghttp2-14 libperl5.40 libpsl5t64 librtmp1 libsasl2-2 libsasl2-modules-db
-#9 6.045   libssh2-1t64 libunistring5 perl perl-modules-5.40
-#9 6.046 Suggested packages:
-#9 6.046   gettext-base git-doc git-email git-gui gitk gitweb git-cvs git-svn gdbm-l10n
-#9 6.046   gnutls-bin krb5-doc krb5-user perl-doc libterm-readline-gnu-perl
-#9 6.046   | libterm-readline-perl-perl make libtap-harness-archive-perl
-#9 6.046 Recommended packages:
-#9 6.046   patch less ssh-client krb5-locales publicsuffix libsasl2-modules netbase
-#9 6.081 The following NEW packages will be installed:
-#9 6.081   git git-man libcurl3t64-gnutls liberror-perl libgdbm-compat4t64 libgdbm6t64
-#9 6.081   libgnutls30t64 libgssapi-krb5-2 libhogweed6t64 libidn2-0 libk5crypto3
-#9 6.081   libkeyutils1 libkrb5-3 libkrb5support0 libldap-common libldap2 libnettle8t64
-#9 6.081   libnghttp2-14 libperl5.40 libpsl5t64 librtmp1 libsasl2-2 libsasl2-modules-db
-#9 6.081   libssh2-1t64 libunistring5 perl perl-modules-5.40
-#9 6.452 0 upgraded, 27 newly installed, 0 to remove and 0 not upgraded.
-#9 6.452 Need to get 17.4 MB of archives.
-#9 6.452 After this operation, 92.1 MB of additional disk space will be used.
-#9 6.452 Get:1 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 libnettle8t64 arm64 3.10.2-1 [190 kB]
+#9 0.794 Get:1 http://ports.ubuntu.com/ubuntu-ports resolute InRelease [136 kB]
+#9 1.670 Get:2 http://ports.ubuntu.com/ubuntu-ports resolute-updates InRelease [137 kB]
+#9 2.006 Get:3 http://ports.ubuntu.com/ubuntu-ports resolute-backports InRelease [137 kB]
+#9 2.296 Get:4 http://ports.ubuntu.com/ubuntu-ports resolute-security InRelease [137 kB]
+#9 2.597 Get:5 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 Packages [1,860 kB]
+#9 3.276 Get:6 http://ports.ubuntu.com/ubuntu-ports resolute/restricted arm64 Packages [231 kB]
+#9 3.316 Get:7 http://ports.ubuntu.com/ubuntu-ports resolute/multiverse arm64 Packages [298 kB]
+#9 3.372 Get:8 http://ports.ubuntu.com/ubuntu-ports resolute/universe arm64 Packages [19.9 MB]
+#9 5.273 Get:9 http://ports.ubuntu.com/ubuntu-ports resolute-updates/multiverse arm64 Packages [26.3 kB]
+#9 5.273 Get:10 http://ports.ubuntu.com/ubuntu-ports resolute-updates/universe arm64 Packages [464 kB]
+#9 5.314 Get:11 http://ports.ubuntu.com/ubuntu-ports resolute-updates/restricted arm64 Packages [915 kB]
+#9 5.471 Get:12 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 Packages [1,032 kB]
+#9 5.589 Get:13 http://ports.ubuntu.com/ubuntu-ports resolute-backports/universe arm64 Packages [3,309 B]
+#9 5.589 Get:14 http://ports.ubuntu.com/ubuntu-ports resolute-security/restricted arm64 Packages [813 kB]
+#9 5.846 Get:15 http://ports.ubuntu.com/ubuntu-ports resolute-security/main arm64 Packages [771 kB]
+#9 5.876 Get:16 http://ports.ubuntu.com/ubuntu-ports resolute-security/universe arm64 Packages [254 kB]
+#9 5.884 Get:17 http://ports.ubuntu.com/ubuntu-ports resolute-security/multiverse arm64 Packages [24.5 kB]
+#9 5.948 Fetched 27.2 MB in 6s (4,756 kB/s)
+#9 5.948 Reading package lists...
+#9 6.499 Reading package lists...
+#9 7.001 Building dependency tree...
+#9 7.138 Reading state information...
+#9 7.178 Solving dependencies...
+#9 7.360 The following additional packages will be installed:
+#9 7.360   git-man libcurl3t64-gnutls liberror-perl libgdbm-compat4t64 libgdbm6t64
+#9 7.360   libgnutls30t64 libgssapi-krb5-2 libhogweed6t64 libidn2-0 libk5crypto3
+#9 7.360   libkeyutils1 libkrb5-3 libkrb5support0 libldap-common libldap2 libnettle8t64
+#9 7.360   libnghttp2-14 libperl5.40 libpsl5t64 librtmp1 libsasl2-2 libsasl2-modules-db
+#9 7.361   libssh2-1t64 libunistring5 perl perl-modules-5.40
+#9 7.361 Suggested packages:
+#9 7.361   gettext-base git-doc git-email git-gui gitk gitweb git-cvs git-svn gdbm-l10n
+#9 7.361   gnutls-bin krb5-doc krb5-user perl-doc libterm-readline-gnu-perl
+#9 7.361   | libterm-readline-perl-perl make libtap-harness-archive-perl
+#9 7.361 Recommended packages:
+#9 7.361   patch less ssh-client krb5-locales publicsuffix libsasl2-modules netbase
+#9 7.398 The following NEW packages will be installed:
+#9 7.398   git git-man libcurl3t64-gnutls liberror-perl libgdbm-compat4t64 libgdbm6t64
+#9 7.398   libgnutls30t64 libgssapi-krb5-2 libhogweed6t64 libidn2-0 libk5crypto3
+#9 7.398   libkeyutils1 libkrb5-3 libkrb5support0 libldap-common libldap2 libnettle8t64
+#9 7.398   libnghttp2-14 libperl5.40 libpsl5t64 librtmp1 libsasl2-2 libsasl2-modules-db
+#9 7.399   libssh2-1t64 libunistring5 perl perl-modules-5.40
+#9 7.773 0 upgraded, 27 newly installed, 0 to remove and 0 not upgraded.
+#9 7.773 Need to get 17.4 MB of archives.
+#9 7.773 After this operation, 92.1 MB of additional disk space will be used.
+#9 7.773 Get:1 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 libnettle8t64 arm64 3.10.2-1 [190 kB]
+#9 8.661 Get:2 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 libhogweed6t64 arm64 3.10.2-1 [200 kB]
+#9 8.794 Get:3 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 libunistring5 arm64 1.3-2build1 [601 kB]
+#9 9.095 Get:4 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 libidn2-0 arm64 2.3.8-4build1 [68.3 kB]
+#9 9.120 Get:5 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 libgnutls30t64 arm64 3.8.12-2ubuntu1.1 [957 kB]
+#9 9.337 Get:6 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 libkrb5support0 arm64 1.22.1-2ubuntu4.1 [33.5 kB]
+#9 9.343 Get:7 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 libk5crypto3 arm64 1.22.1-2ubuntu4.1 [82.2 kB]
+#9 9.361 Get:8 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 libkeyutils1 arm64 1.6.3-6ubuntu3 [10.8 kB]
+#9 9.362 Get:9 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 libkrb5-3 arm64 1.22.1-2ubuntu4.1 [357 kB]
+#9 9.396 Get:10 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 libgssapi-krb5-2 arm64 1.22.1-2ubuntu4.1 [144 kB]
+#9 9.410 Get:11 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 libgdbm6t64 arm64 1.26-1build1 [36.1 kB]
+#9 9.414 Get:12 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 libnghttp2-14 arm64 1.68.0-2ubuntu0.2 [70.7 kB]
+#9 9.419 Get:13 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 libpsl5t64 arm64 0.21.2-1.1build2 [59.7 kB]
+#9 9.424 Get:14 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 libsasl2-modules-db arm64 2.1.28+dfsg1-9ubuntu3 [21.6 kB]
+#9 9.513 Get:15 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 libsasl2-2 arm64 2.1.28+dfsg1-9ubuntu3 [53.7 kB]
+#9 9.520 Get:16 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 libldap-common all 2.6.10+dfsg-1ubuntu5 [36.0 kB]
+#9 9.536 Get:17 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 libldap2 arm64 2.6.10+dfsg-1ubuntu5 [200 kB]
+#9 9.551 Get:18 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 librtmp1 arm64 2.4+20151223.gitfa8646d.1-3 [58.7 kB]
+#9 9.571 Get:19 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 libssh2-1t64 arm64 1.11.1-1ubuntu0.26.04.4 [134 kB]
+#9 9.583 Get:20 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 libcurl3t64-gnutls arm64 8.18.0-1ubuntu2.8 [408 kB]
+#9 9.609 Get:21 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 perl-modules-5.40 all 5.40.1-7ubuntu0.3 [3,212 kB]
+#9 9.835 Get:22 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 libgdbm-compat4t64 arm64 1.26-1build1 [6,650 B]
+#9 9.837 Get:23 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 libperl5.40 arm64 5.40.1-7ubuntu0.3 [4,784 kB]
 #9 ...
 
 #10 [stage-1 2/4] RUN apt-get update  && apt-get install -y --no-install-recommends curl  && rm -rf /var/lib/apt/lists/*
-#10 0.844 Get:1 http://ports.ubuntu.com/ubuntu-ports resolute InRelease [136 kB]
-#10 1.736 Get:2 http://ports.ubuntu.com/ubuntu-ports resolute-updates InRelease [137 kB]
-#10 2.077 Get:3 http://ports.ubuntu.com/ubuntu-ports resolute-backports InRelease [137 kB]
-#10 2.369 Get:4 http://ports.ubuntu.com/ubuntu-ports resolute-security InRelease [137 kB]
-#10 2.648 Get:5 http://ports.ubuntu.com/ubuntu-ports resolute/restricted arm64 Packages [231 kB]
-#10 2.813 Get:6 http://ports.ubuntu.com/ubuntu-ports resolute/universe arm64 Packages [19.9 MB]
-#10 4.282 Get:7 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 Packages [1,860 kB]
-#10 4.352 Get:8 http://ports.ubuntu.com/ubuntu-ports resolute/multiverse arm64 Packages [298 kB]
-#10 4.363 Get:9 http://ports.ubuntu.com/ubuntu-ports resolute-updates/restricted arm64 Packages [915 kB]
-#10 4.403 Get:10 http://ports.ubuntu.com/ubuntu-ports resolute-updates/universe arm64 Packages [464 kB]
-#10 4.431 Get:11 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 Packages [1,032 kB]
-#10 4.477 Get:12 http://ports.ubuntu.com/ubuntu-ports resolute-updates/multiverse arm64 Packages [26.3 kB]
-#10 4.478 Get:13 http://ports.ubuntu.com/ubuntu-ports resolute-backports/universe arm64 Packages [3,309 B]
-#10 4.478 Get:14 http://ports.ubuntu.com/ubuntu-ports resolute-security/universe arm64 Packages [254 kB]
-#10 4.488 Get:15 http://ports.ubuntu.com/ubuntu-ports resolute-security/main arm64 Packages [771 kB]
-#10 4.521 Get:16 http://ports.ubuntu.com/ubuntu-ports resolute-security/multiverse arm64 Packages [24.5 kB]
-#10 4.531 Get:17 http://ports.ubuntu.com/ubuntu-ports resolute-security/restricted arm64 Packages [813 kB]
-#10 4.980 Fetched 27.2 MB in 5s (5,687 kB/s)
-#10 4.980 Reading package lists...
-#10 5.514 Reading package lists...
-#10 6.038 Building dependency tree...
-#10 6.172 Reading state information...
-#10 6.207 Solving dependencies...
-#10 6.369 The following additional packages will be installed:
-#10 6.369   libcurl4t64 libgnutls30t64 libgssapi-krb5-2 libhogweed6t64 libidn2-0
-#10 6.369   libk5crypto3 libkeyutils1 libkrb5-3 libkrb5support0 libldap-common libldap2
-#10 6.370   libnettle8t64 libnghttp2-14 libpsl5t64 librtmp1 libsasl2-2
-#10 6.370   libsasl2-modules-db libssh2-1t64 libunistring5
-#10 6.371 Suggested packages:
-#10 6.371   gnutls-bin krb5-doc krb5-user
-#10 6.371 Recommended packages:
-#10 6.371   bash-completion krb5-locales publicsuffix libsasl2-modules
-#10 6.413 The following NEW packages will be installed:
-#10 6.414   curl libcurl4t64 libgnutls30t64 libgssapi-krb5-2 libhogweed6t64 libidn2-0
-#10 6.414   libk5crypto3 libkeyutils1 libkrb5-3 libkrb5support0 libldap-common libldap2
-#10 6.414   libnettle8t64 libnghttp2-14 libpsl5t64 librtmp1 libsasl2-2
-#10 6.414   libsasl2-modules-db libssh2-1t64 libunistring5
-#10 6.808 0 upgraded, 20 newly installed, 0 to remove and 0 not upgraded.
-#10 6.808 Need to get 3,963 kB of archives.
-#10 6.808 After this operation, 11.4 MB of additional disk space will be used.
-#10 6.808 Get:1 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 libnettle8t64 arm64 3.10.2-1 [190 kB]
-#10 7.756 Get:2 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 libhogweed6t64 arm64 3.10.2-1 [200 kB]
-#10 7.904 Get:3 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 libunistring5 arm64 1.3-2build1 [601 kB]
-#10 8.226 Get:4 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 libidn2-0 arm64 2.3.8-4build1 [68.3 kB]
-#10 8.265 Get:5 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 libgnutls30t64 arm64 3.8.12-2ubuntu1.1 [957 kB]
-#10 8.489 Get:6 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 libkrb5support0 arm64 1.22.1-2ubuntu4.1 [33.5 kB]
-#10 8.499 Get:7 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 libk5crypto3 arm64 1.22.1-2ubuntu4.1 [82.2 kB]
-#10 8.508 Get:8 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 libkeyutils1 arm64 1.6.3-6ubuntu3 [10.8 kB]
-#10 8.508 Get:9 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 libkrb5-3 arm64 1.22.1-2ubuntu4.1 [357 kB]
-#10 8.548 Get:10 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 libgssapi-krb5-2 arm64 1.22.1-2ubuntu4.1 [144 kB]
-#10 8.562 Get:11 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 libnghttp2-14 arm64 1.68.0-2ubuntu0.2 [70.7 kB]
-#10 8.569 Get:12 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 libpsl5t64 arm64 0.21.2-1.1build2 [59.7 kB]
-#10 8.575 Get:13 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 libsasl2-modules-db arm64 2.1.28+dfsg1-9ubuntu3 [21.6 kB]
-#10 8.576 Get:14 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 libsasl2-2 arm64 2.1.28+dfsg1-9ubuntu3 [53.7 kB]
-#10 8.674 Get:15 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 libldap-common all 2.6.10+dfsg-1ubuntu5 [36.0 kB]
-#10 8.681 Get:16 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 libldap2 arm64 2.6.10+dfsg-1ubuntu5 [200 kB]
-#10 8.696 Get:17 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 librtmp1 arm64 2.4+20151223.gitfa8646d.1-3 [58.7 kB]
-#10 8.700 Get:18 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 libssh2-1t64 arm64 1.11.1-1ubuntu0.26.04.4 [134 kB]
-#10 8.731 Get:19 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 libcurl4t64 arm64 8.18.0-1ubuntu2.8 [417 kB]
-#10 8.756 Get:20 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 curl arm64 8.18.0-1ubuntu2.8 [268 kB]
-#10 8.883 debconf: unable to initialize frontend: Dialog
-#10 8.883 debconf: (TERM is not set, so the dialog frontend is not usable.)
-#10 8.883 debconf: falling back to frontend: Readline
-#10 8.883 debconf: unable to initialize frontend: Readline
-#10 8.883 debconf: (Can't locate Term/ReadLine.pm in @INC (you may need to install the Term::ReadLine module) (@INC entries checked: /etc/perl /usr/local/lib/aarch64-linux-gnu/perl/5.40.1 /usr/local/share/perl/5.40.1 /usr/lib/aarch64-linux-gnu/perl5/5.40 /usr/share/perl5 /usr/lib/aarch64-linux-gnu/perl-base /usr/lib/aarch64-linux-gnu/perl/5.40 /usr/share/perl/5.40 /usr/local/lib/site_perl) at /usr/share/perl5/Debconf/FrontEnd/Readline.pm line 8, <STDIN> line 20.)
-#10 8.883 debconf: falling back to frontend: Teletype
-#10 8.887 debconf: unable to initialize frontend: Teletype
-#10 8.887 debconf: (This frontend requires a controlling tty.)
-#10 8.887 debconf: falling back to frontend: Noninteractive
-#10 9.416 Fetched 3,963 kB in 2s (1,688 kB/s)
-#10 9.426 Selecting previously unselected package libnettle8t64:arm64.
-#10 9.426 (Reading database ... 
-(Reading database ... 5%
-(Reading database ... 10%
-(Reading database ... 15%
-(Reading database ... 20%
-(Reading database ... 25%
-(Reading database ... 30%
-(Reading database ... 35%
-(Reading database ... 40%
-(Reading database ... 45%
-(Reading database ... 50%
-(Reading database ... 55%
-(Reading database ... 60%
-(Reading database ... 65%
-(Reading database ... 70%
-(Reading database ... 75%
-(Reading database ... 80%
-(Reading database ... 85%
-(Reading database ... 90%
-(Reading database ... 95%
-(Reading database ... 100%
-(Reading database ... 9794 files and directories currently installed.)
-#10 9.432 Preparing to unpack .../00-libnettle8t64_3.10.2-1_arm64.deb ...
-#10 9.437 Unpacking libnettle8t64:arm64 (3.10.2-1) ...
-#10 9.458 Selecting previously unselected package libhogweed6t64:arm64.
-#10 9.460 Preparing to unpack .../01-libhogweed6t64_3.10.2-1_arm64.deb ...
-#10 9.461 Unpacking libhogweed6t64:arm64 (3.10.2-1) ...
-#10 9.475 Selecting previously unselected package libunistring5:arm64.
-#10 9.476 Preparing to unpack .../02-libunistring5_1.3-2build1_arm64.deb ...
-#10 9.478 Unpacking libunistring5:arm64 (1.3-2build1) ...
-#10 9.498 Selecting previously unselected package libidn2-0:arm64.
-#10 9.499 Preparing to unpack .../03-libidn2-0_2.3.8-4build1_arm64.deb ...
-#10 9.501 Unpacking libidn2-0:arm64 (2.3.8-4build1) ...
-#10 9.514 Selecting previously unselected package libgnutls30t64:arm64.
-#10 9.515 Preparing to unpack .../04-libgnutls30t64_3.8.12-2ubuntu1.1_arm64.deb ...
-#10 9.516 Unpacking libgnutls30t64:arm64 (3.8.12-2ubuntu1.1) ...
-#10 9.539 Selecting previously unselected package libkrb5support0:arm64.
-#10 9.539 Preparing to unpack .../05-libkrb5support0_1.22.1-2ubuntu4.1_arm64.deb ...
-#10 9.541 Unpacking libkrb5support0:arm64 (1.22.1-2ubuntu4.1) ...
-#10 9.553 Selecting previously unselected package libk5crypto3:arm64.
-#10 9.554 Preparing to unpack .../06-libk5crypto3_1.22.1-2ubuntu4.1_arm64.deb ...
-#10 9.556 Unpacking libk5crypto3:arm64 (1.22.1-2ubuntu4.1) ...
-#10 9.569 Selecting previously unselected package libkeyutils1:arm64.
-#10 9.570 Preparing to unpack .../07-libkeyutils1_1.6.3-6ubuntu3_arm64.deb ...
-#10 9.571 Unpacking libkeyutils1:arm64 (1.6.3-6ubuntu3) ...
-#10 9.582 Selecting previously unselected package libkrb5-3:arm64.
-#10 9.583 Preparing to unpack .../08-libkrb5-3_1.22.1-2ubuntu4.1_arm64.deb ...
-#10 9.585 Unpacking libkrb5-3:arm64 (1.22.1-2ubuntu4.1) ...
-#10 9.605 Selecting previously unselected package libgssapi-krb5-2:arm64.
-#10 9.606 Preparing to unpack .../09-libgssapi-krb5-2_1.22.1-2ubuntu4.1_arm64.deb ...
-#10 9.607 Unpacking libgssapi-krb5-2:arm64 (1.22.1-2ubuntu4.1) ...
-#10 9.623 Selecting previously unselected package libnghttp2-14:arm64.
-#10 9.624 Preparing to unpack .../10-libnghttp2-14_1.68.0-2ubuntu0.2_arm64.deb ...
-#10 9.625 Unpacking libnghttp2-14:arm64 (1.68.0-2ubuntu0.2) ...
-#10 9.639 Selecting previously unselected package libpsl5t64:arm64.
-#10 9.640 Preparing to unpack .../11-libpsl5t64_0.21.2-1.1build2_arm64.deb ...
-#10 9.641 Unpacking libpsl5t64:arm64 (0.21.2-1.1build2) ...
-#10 9.652 Selecting previously unselected package libsasl2-modules-db:arm64.
-#10 9.653 Preparing to unpack .../12-libsasl2-modules-db_2.1.28+dfsg1-9ubuntu3_arm64.deb ...
-#10 9.654 Unpacking libsasl2-modules-db:arm64 (2.1.28+dfsg1-9ubuntu3) ...
-#10 9.665 Selecting previously unselected package libsasl2-2:arm64.
-#10 9.666 Preparing to unpack .../13-libsasl2-2_2.1.28+dfsg1-9ubuntu3_arm64.deb ...
-#10 9.667 Unpacking libsasl2-2:arm64 (2.1.28+dfsg1-9ubuntu3) ...
-#10 9.679 Selecting previously unselected package libldap-common.
-#10 9.680 Preparing to unpack .../14-libldap-common_2.6.10+dfsg-1ubuntu5_all.deb ...
-#10 9.681 Unpacking libldap-common (2.6.10+dfsg-1ubuntu5) ...
-#10 9.696 Selecting previously unselected package libldap2:arm64.
-#10 9.697 Preparing to unpack .../15-libldap2_2.6.10+dfsg-1ubuntu5_arm64.deb ...
-#10 9.699 Unpacking libldap2:arm64 (2.6.10+dfsg-1ubuntu5) ...
-#10 9.718 Selecting previously unselected package librtmp1:arm64.
-#10 9.719 Preparing to unpack .../16-librtmp1_2.4+20151223.gitfa8646d.1-3_arm64.deb ...
-#10 9.721 Unpacking librtmp1:arm64 (2.4+20151223.gitfa8646d.1-3) ...
-#10 9.733 Selecting previously unselected package libssh2-1t64:arm64.
-#10 9.734 Preparing to unpack .../17-libssh2-1t64_1.11.1-1ubuntu0.26.04.4_arm64.deb ...
-#10 9.737 Unpacking libssh2-1t64:arm64 (1.11.1-1ubuntu0.26.04.4) ...
-#10 9.750 Selecting previously unselected package libcurl4t64:arm64.
-#10 9.751 Preparing to unpack .../18-libcurl4t64_8.18.0-1ubuntu2.8_arm64.deb ...
-#10 9.752 Unpacking libcurl4t64:arm64 (8.18.0-1ubuntu2.8) ...
-#10 9.765 Selecting previously unselected package curl.
-#10 9.766 Preparing to unpack .../19-curl_8.18.0-1ubuntu2.8_arm64.deb ...
-#10 9.767 Unpacking curl (8.18.0-1ubuntu2.8) ...
-#10 9.783 Setting up libkeyutils1:arm64 (1.6.3-6ubuntu3) ...
-#10 9.795 Setting up libnghttp2-14:arm64 (1.68.0-2ubuntu0.2) ...
-#10 9.800 Setting up libldap-common (2.6.10+dfsg-1ubuntu5) ...
-#10 9.805 Setting up libkrb5support0:arm64 (1.22.1-2ubuntu4.1) ...
-#10 9.808 Setting up libsasl2-modules-db:arm64 (2.1.28+dfsg1-9ubuntu3) ...
-#10 9.812 Setting up libnettle8t64:arm64 (3.10.2-1) ...
-#10 9.815 Setting up libunistring5:arm64 (1.3-2build1) ...
-#10 9.819 Setting up libk5crypto3:arm64 (1.22.1-2ubuntu4.1) ...
-#10 9.823 Setting up libsasl2-2:arm64 (2.1.28+dfsg1-9ubuntu3) ...
-#10 9.827 Setting up libhogweed6t64:arm64 (3.10.2-1) ...
-#10 9.830 Setting up libkrb5-3:arm64 (1.22.1-2ubuntu4.1) ...
-#10 9.834 Setting up libssh2-1t64:arm64 (1.11.1-1ubuntu0.26.04.4) ...
-#10 9.838 Setting up libldap2:arm64 (2.6.10+dfsg-1ubuntu5) ...
-#10 9.843 Setting up libidn2-0:arm64 (2.3.8-4build1) ...
-#10 9.846 Setting up libgssapi-krb5-2:arm64 (1.22.1-2ubuntu4.1) ...
-#10 9.850 Setting up libgnutls30t64:arm64 (3.8.12-2ubuntu1.1) ...
-#10 9.854 Setting up libpsl5t64:arm64 (0.21.2-1.1build2) ...
-#10 9.857 Setting up librtmp1:arm64 (2.4+20151223.gitfa8646d.1-3) ...
-#10 9.860 Setting up libcurl4t64:arm64 (8.18.0-1ubuntu2.8) ...
-#10 9.863 Setting up curl (8.18.0-1ubuntu2.8) ...
-#10 9.866 Processing triggers for libc-bin (2.43-2ubuntu2.4) ...
+#10 0.782 Get:1 http://ports.ubuntu.com/ubuntu-ports resolute InRelease [136 kB]
+#10 1.580 Get:2 http://ports.ubuntu.com/ubuntu-ports resolute-updates InRelease [137 kB]
+#10 1.911 Get:3 http://ports.ubuntu.com/ubuntu-ports resolute-backports InRelease [137 kB]
+#10 2.194 Get:4 http://ports.ubuntu.com/ubuntu-ports resolute-security InRelease [137 kB]
+#10 2.471 Get:5 http://ports.ubuntu.com/ubuntu-ports resolute/restricted arm64 Packages [231 kB]
+#10 2.645 Get:6 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 Packages [1,860 kB]
+#10 3.141 Get:7 http://ports.ubuntu.com/ubuntu-ports resolute/multiverse arm64 Packages [298 kB]
+#10 3.198 Get:8 http://ports.ubuntu.com/ubuntu-ports resolute/universe arm64 Packages [19.9 MB]
+#10 5.249 Get:9 http://ports.ubuntu.com/ubuntu-ports resolute-updates/universe arm64 Packages [464 kB]
+#10 5.297 Get:10 http://ports.ubuntu.com/ubuntu-ports resolute-updates/multiverse arm64 Packages [26.3 kB]
+#10 5.298 Get:11 http://ports.ubuntu.com/ubuntu-ports resolute-updates/restricted arm64 Packages [915 kB]
+#10 5.372 Get:12 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 Packages [1,032 kB]
+#10 5.460 Get:13 http://ports.ubuntu.com/ubuntu-ports resolute-backports/universe arm64 Packages [3,309 B]
+#10 5.460 Get:14 http://ports.ubuntu.com/ubuntu-ports resolute-security/main arm64 Packages [771 kB]
+#10 5.531 Get:15 http://ports.ubuntu.com/ubuntu-ports resolute-security/multiverse arm64 Packages [24.5 kB]
+#10 5.534 Get:16 http://ports.ubuntu.com/ubuntu-ports resolute-security/restricted arm64 Packages [813 kB]
+#10 5.619 Get:17 http://ports.ubuntu.com/ubuntu-ports resolute-security/universe arm64 Packages [254 kB]
+#10 5.947 Fetched 27.2 MB in 6s (4,758 kB/s)
+#10 5.947 Reading package lists...
+#10 6.510 Reading package lists...
+#10 7.029 Building dependency tree...
+#10 7.166 Reading state information...
+#10 7.212 Solving dependencies...
+#10 7.393 The following additional packages will be installed:
+#10 7.393   libcurl4t64 libgnutls30t64 libgssapi-krb5-2 libhogweed6t64 libidn2-0
+#10 7.393   libk5crypto3 libkeyutils1 libkrb5-3 libkrb5support0 libldap-common libldap2
+#10 7.393   libnettle8t64 libnghttp2-14 libpsl5t64 librtmp1 libsasl2-2
+#10 7.394   libsasl2-modules-db libssh2-1t64 libunistring5
+#10 7.394 Suggested packages:
+#10 7.394   gnutls-bin krb5-doc krb5-user
+#10 7.394 Recommended packages:
+#10 7.394   bash-completion krb5-locales publicsuffix libsasl2-modules
+#10 7.424 The following NEW packages will be installed:
+#10 7.424   curl libcurl4t64 libgnutls30t64 libgssapi-krb5-2 libhogweed6t64 libidn2-0
+#10 7.424   libk5crypto3 libkeyutils1 libkrb5-3 libkrb5support0 libldap-common libldap2
+#10 7.424   libnettle8t64 libnghttp2-14 libpsl5t64 librtmp1 libsasl2-2
+#10 7.424   libsasl2-modules-db libssh2-1t64 libunistring5
+#10 7.802 0 upgraded, 20 newly installed, 0 to remove and 0 not upgraded.
+#10 7.802 Need to get 3,963 kB of archives.
+#10 7.802 After this operation, 11.4 MB of additional disk space will be used.
+#10 7.802 Get:1 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 libnettle8t64 arm64 3.10.2-1 [190 kB]
+#10 8.723 Get:2 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 libhogweed6t64 arm64 3.10.2-1 [200 kB]
+#10 8.860 Get:3 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 libunistring5 arm64 1.3-2build1 [601 kB]
+#10 9.170 Get:4 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 libidn2-0 arm64 2.3.8-4build1 [68.3 kB]
+#10 9.191 Get:5 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 libgnutls30t64 arm64 3.8.12-2ubuntu1.1 [957 kB]
+#10 9.412 Get:6 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 libkrb5support0 arm64 1.22.1-2ubuntu4.1 [33.5 kB]
+#10 9.419 Get:7 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 libk5crypto3 arm64 1.22.1-2ubuntu4.1 [82.2 kB]
+#10 9.441 Get:8 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 libkeyutils1 arm64 1.6.3-6ubuntu3 [10.8 kB]
+#10 9.441 Get:9 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 libkrb5-3 arm64 1.22.1-2ubuntu4.1 [357 kB]
+#10 9.478 Get:10 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 libgssapi-krb5-2 arm64 1.22.1-2ubuntu4.1 [144 kB]
+#10 9.491 Get:11 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 libnghttp2-14 arm64 1.68.0-2ubuntu0.2 [70.7 kB]
+#10 9.497 Get:12 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 libpsl5t64 arm64 0.21.2-1.1build2 [59.7 kB]
+#10 9.501 Get:13 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 libsasl2-modules-db arm64 2.1.28+dfsg1-9ubuntu3 [21.6 kB]
+#10 9.505 Get:14 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 libsasl2-2 arm64 2.1.28+dfsg1-9ubuntu3 [53.7 kB]
+#10 9.588 Get:15 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 libldap-common all 2.6.10+dfsg-1ubuntu5 [36.0 kB]
+#10 9.594 Get:16 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 libldap2 arm64 2.6.10+dfsg-1ubuntu5 [200 kB]
+#10 9.618 Get:17 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 librtmp1 arm64 2.4+20151223.gitfa8646d.1-3 [58.7 kB]
+#10 9.626 Get:18 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 libssh2-1t64 arm64 1.11.1-1ubuntu0.26.04.4 [134 kB]
+#10 9.658 Get:19 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 libcurl4t64 arm64 8.18.0-1ubuntu2.8 [417 kB]
+#10 9.692 Get:20 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 curl arm64 8.18.0-1ubuntu2.8 [268 kB]
+#10 9.872 debconf: unable to initialize frontend: Dialog
+#10 9.872 debconf: (TERM is not set, so the dialog frontend is not usable.)
+#10 9.872 debconf: falling back to frontend: Readline
+#10 9.872 debconf: unable to initialize frontend: Readline
+#10 9.872 debconf: (Can't locate Term/ReadLine.pm in @INC (you may need to install the Term::ReadLine module) (@INC entries checked: /etc/perl /usr/local/lib/aarch64-linux-gnu/perl/5.40.1 /usr/local/share/perl/5.40.1 /usr/lib/aarch64-linux-gnu/perl5/5.40 /usr/share/perl5 /usr/lib/aarch64-linux-gnu/perl-base /usr/lib/aarch64-linux-gnu/perl/5.40 /usr/share/perl/5.40 /usr/local/lib/site_perl) at /usr/share/perl5/Debconf/FrontEnd/Readline.pm line 8, <STDIN> line 20.)
+#10 9.872 debconf: falling back to frontend: Teletype
+#10 9.877 debconf: unable to initialize frontend: Teletype
+#10 9.877 debconf: (This frontend requires a controlling tty.)
+#10 9.877 debconf: falling back to frontend: Noninteractive
 #10 ...
 
 #9 [builder 2/5] RUN apt-get update  && apt-get install -y --no-install-recommends git  && rm -rf /var/lib/apt/lists/*
-#9 7.361 Get:2 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 libhogweed6t64 arm64 3.10.2-1 [200 kB]
-#9 7.516 Get:3 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 libunistring5 arm64 1.3-2build1 [601 kB]
+#9 10.05 Get:24 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 perl arm64 5.40.1-7ubuntu0.3 [262 kB]
+#9 10.10 Get:25 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 liberror-perl all 0.17030-1 [23.5 kB]
+#9 10.10 Get:26 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 git-man all 1:2.53.0-1ubuntu1.1 [1,197 kB]
+#9 10.15 Get:27 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 git arm64 1:2.53.0-1ubuntu1.1 [4,224 kB]
+#9 10.45 debconf: unable to initialize frontend: Dialog
+#9 10.45 debconf: (TERM is not set, so the dialog frontend is not usable.)
+#9 10.45 debconf: falling back to frontend: Readline
+#9 10.45 debconf: unable to initialize frontend: Readline
+#9 10.45 debconf: (Can't locate Term/ReadLine.pm in @INC (you may need to install the Term::ReadLine module) (@INC entries checked: /etc/perl /usr/local/lib/aarch64-linux-gnu/perl/5.40.1 /usr/local/share/perl/5.40.1 /usr/lib/aarch64-linux-gnu/perl5/5.40 /usr/share/perl5 /usr/lib/aarch64-linux-gnu/perl-base /usr/lib/aarch64-linux-gnu/perl/5.40 /usr/share/perl/5.40 /usr/local/lib/site_perl) at /usr/share/perl5/Debconf/FrontEnd/Readline.pm line 8, <STDIN> line 27.)
+#9 10.45 debconf: falling back to frontend: Teletype
+#9 10.46 debconf: unable to initialize frontend: Teletype
+#9 10.46 debconf: (This frontend requires a controlling tty.)
+#9 10.46 debconf: falling back to frontend: Noninteractive
 #9 ...
 
 #10 [stage-1 2/4] RUN apt-get update  && apt-get install -y --no-install-recommends curl  && rm -rf /var/lib/apt/lists/*
-#10 DONE 10.5s
+#10 10.42 Fetched 3,963 kB in 2s (1,742 kB/s)
+#10 10.44 Selecting previously unselected package libnettle8t64:arm64.
+#10 10.44 (Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 9794 files and directories currently installed.)
+#10 10.46 Preparing to unpack .../00-libnettle8t64_3.10.2-1_arm64.deb ...
+#10 10.46 Unpacking libnettle8t64:arm64 (3.10.2-1) ...
+#10 10.48 Selecting previously unselected package libhogweed6t64:arm64.
+#10 10.48 Preparing to unpack .../01-libhogweed6t64_3.10.2-1_arm64.deb ...
+#10 10.48 Unpacking libhogweed6t64:arm64 (3.10.2-1) ...
+#10 10.49 Selecting previously unselected package libunistring5:arm64.
+#10 10.49 Preparing to unpack .../02-libunistring5_1.3-2build1_arm64.deb ...
+#10 10.49 Unpacking libunistring5:arm64 (1.3-2build1) ...
+#10 10.51 Selecting previously unselected package libidn2-0:arm64.
+#10 10.51 Preparing to unpack .../03-libidn2-0_2.3.8-4build1_arm64.deb ...
+#10 10.51 Unpacking libidn2-0:arm64 (2.3.8-4build1) ...
+#10 10.53 Selecting previously unselected package libgnutls30t64:arm64.
+#10 10.53 Preparing to unpack .../04-libgnutls30t64_3.8.12-2ubuntu1.1_arm64.deb ...
+#10 10.53 Unpacking libgnutls30t64:arm64 (3.8.12-2ubuntu1.1) ...
+#10 10.56 Selecting previously unselected package libkrb5support0:arm64.
+#10 10.56 Preparing to unpack .../05-libkrb5support0_1.22.1-2ubuntu4.1_arm64.deb ...
+#10 10.56 Unpacking libkrb5support0:arm64 (1.22.1-2ubuntu4.1) ...
+#10 10.57 Selecting previously unselected package libk5crypto3:arm64.
+#10 10.57 Preparing to unpack .../06-libk5crypto3_1.22.1-2ubuntu4.1_arm64.deb ...
+#10 10.57 Unpacking libk5crypto3:arm64 (1.22.1-2ubuntu4.1) ...
+#10 10.58 Selecting previously unselected package libkeyutils1:arm64.
+#10 10.58 Preparing to unpack .../07-libkeyutils1_1.6.3-6ubuntu3_arm64.deb ...
+#10 10.58 Unpacking libkeyutils1:arm64 (1.6.3-6ubuntu3) ...
+#10 10.59 Selecting previously unselected package libkrb5-3:arm64.
+#10 10.59 Preparing to unpack .../08-libkrb5-3_1.22.1-2ubuntu4.1_arm64.deb ...
+#10 10.60 Unpacking libkrb5-3:arm64 (1.22.1-2ubuntu4.1) ...
+#10 10.61 Selecting previously unselected package libgssapi-krb5-2:arm64.
+#10 10.61 Preparing to unpack .../09-libgssapi-krb5-2_1.22.1-2ubuntu4.1_arm64.deb ...
+#10 10.61 Unpacking libgssapi-krb5-2:arm64 (1.22.1-2ubuntu4.1) ...
+#10 10.63 Selecting previously unselected package libnghttp2-14:arm64.
+#10 10.63 Preparing to unpack .../10-libnghttp2-14_1.68.0-2ubuntu0.2_arm64.deb ...
+#10 10.63 Unpacking libnghttp2-14:arm64 (1.68.0-2ubuntu0.2) ...
+#10 10.64 Selecting previously unselected package libpsl5t64:arm64.
+#10 10.64 Preparing to unpack .../11-libpsl5t64_0.21.2-1.1build2_arm64.deb ...
+#10 10.64 Unpacking libpsl5t64:arm64 (0.21.2-1.1build2) ...
+#10 10.66 Selecting previously unselected package libsasl2-modules-db:arm64.
+#10 10.66 Preparing to unpack .../12-libsasl2-modules-db_2.1.28+dfsg1-9ubuntu3_arm64.deb ...
+#10 10.66 Unpacking libsasl2-modules-db:arm64 (2.1.28+dfsg1-9ubuntu3) ...
+#10 10.67 Selecting previously unselected package libsasl2-2:arm64.
+#10 10.67 Preparing to unpack .../13-libsasl2-2_2.1.28+dfsg1-9ubuntu3_arm64.deb ...
+#10 10.67 Unpacking libsasl2-2:arm64 (2.1.28+dfsg1-9ubuntu3) ...
+#10 10.68 Selecting previously unselected package libldap-common.
+#10 10.68 Preparing to unpack .../14-libldap-common_2.6.10+dfsg-1ubuntu5_all.deb ...
+#10 10.68 Unpacking libldap-common (2.6.10+dfsg-1ubuntu5) ...
+#10 10.70 Selecting previously unselected package libldap2:arm64.
+#10 10.70 Preparing to unpack .../15-libldap2_2.6.10+dfsg-1ubuntu5_arm64.deb ...
+#10 10.70 Unpacking libldap2:arm64 (2.6.10+dfsg-1ubuntu5) ...
+#10 10.71 Selecting previously unselected package librtmp1:arm64.
+#10 10.71 Preparing to unpack .../16-librtmp1_2.4+20151223.gitfa8646d.1-3_arm64.deb ...
+#10 10.72 Unpacking librtmp1:arm64 (2.4+20151223.gitfa8646d.1-3) ...
+#10 10.73 Selecting previously unselected package libssh2-1t64:arm64.
+#10 10.73 Preparing to unpack .../17-libssh2-1t64_1.11.1-1ubuntu0.26.04.4_arm64.deb ...
+#10 10.73 Unpacking libssh2-1t64:arm64 (1.11.1-1ubuntu0.26.04.4) ...
+#10 10.74 Selecting previously unselected package libcurl4t64:arm64.
+#10 10.74 Preparing to unpack .../18-libcurl4t64_8.18.0-1ubuntu2.8_arm64.deb ...
+#10 10.74 Unpacking libcurl4t64:arm64 (8.18.0-1ubuntu2.8) ...
+#10 10.76 Selecting previously unselected package curl.
+#10 10.76 Preparing to unpack .../19-curl_8.18.0-1ubuntu2.8_arm64.deb ...
+#10 10.76 Unpacking curl (8.18.0-1ubuntu2.8) ...
+#10 10.78 Setting up libkeyutils1:arm64 (1.6.3-6ubuntu3) ...
+#10 10.78 Setting up libnghttp2-14:arm64 (1.68.0-2ubuntu0.2) ...
+#10 10.79 Setting up libldap-common (2.6.10+dfsg-1ubuntu5) ...
+#10 10.79 Setting up libkrb5support0:arm64 (1.22.1-2ubuntu4.1) ...
+#10 10.80 Setting up libsasl2-modules-db:arm64 (2.1.28+dfsg1-9ubuntu3) ...
+#10 10.80 Setting up libnettle8t64:arm64 (3.10.2-1) ...
+#10 10.81 Setting up libunistring5:arm64 (1.3-2build1) ...
+#10 10.81 Setting up libk5crypto3:arm64 (1.22.1-2ubuntu4.1) ...
+#10 10.81 Setting up libsasl2-2:arm64 (2.1.28+dfsg1-9ubuntu3) ...
+#10 10.82 Setting up libhogweed6t64:arm64 (3.10.2-1) ...
+#10 10.82 Setting up libkrb5-3:arm64 (1.22.1-2ubuntu4.1) ...
+#10 10.82 Setting up libssh2-1t64:arm64 (1.11.1-1ubuntu0.26.04.4) ...
+#10 10.82 Setting up libldap2:arm64 (2.6.10+dfsg-1ubuntu5) ...
+#10 10.83 Setting up libidn2-0:arm64 (2.3.8-4build1) ...
+#10 10.83 Setting up libgssapi-krb5-2:arm64 (1.22.1-2ubuntu4.1) ...
+#10 10.84 Setting up libgnutls30t64:arm64 (3.8.12-2ubuntu1.1) ...
+#10 10.84 Setting up libpsl5t64:arm64 (0.21.2-1.1build2) ...
+#10 10.85 Setting up librtmp1:arm64 (2.4+20151223.gitfa8646d.1-3) ...
+#10 10.85 Setting up libcurl4t64:arm64 (8.18.0-1ubuntu2.8) ...
+#10 10.85 Setting up curl (8.18.0-1ubuntu2.8) ...
+#10 10.86 Processing triggers for libc-bin (2.43-2ubuntu2.4) ...
+#10 DONE 11.0s
 
 #11 [stage-1 3/4] WORKDIR /app
 #11 DONE 0.0s
 
 #9 [builder 2/5] RUN apt-get update  && apt-get install -y --no-install-recommends git  && rm -rf /var/lib/apt/lists/*
-#9 7.814 Get:4 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 libidn2-0 arm64 2.3.8-4build1 [68.3 kB]
-#9 7.836 Get:5 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 libgnutls30t64 arm64 3.8.12-2ubuntu1.1 [957 kB]
-#9 8.055 Get:6 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 libkrb5support0 arm64 1.22.1-2ubuntu4.1 [33.5 kB]
-#9 8.070 Get:7 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 libk5crypto3 arm64 1.22.1-2ubuntu4.1 [82.2 kB]
-#9 8.079 Get:8 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 libkeyutils1 arm64 1.6.3-6ubuntu3 [10.8 kB]
-#9 8.081 Get:9 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 libkrb5-3 arm64 1.22.1-2ubuntu4.1 [357 kB]
-#9 8.114 Get:10 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 libgssapi-krb5-2 arm64 1.22.1-2ubuntu4.1 [144 kB]
-#9 8.128 Get:11 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 libgdbm6t64 arm64 1.26-1build1 [36.1 kB]
-#9 8.132 Get:12 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 libnghttp2-14 arm64 1.68.0-2ubuntu0.2 [70.7 kB]
-#9 8.138 Get:13 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 libpsl5t64 arm64 0.21.2-1.1build2 [59.7 kB]
-#9 8.143 Get:14 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 libsasl2-modules-db arm64 2.1.28+dfsg1-9ubuntu3 [21.6 kB]
-#9 8.242 Get:15 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 libsasl2-2 arm64 2.1.28+dfsg1-9ubuntu3 [53.7 kB]
-#9 8.250 Get:16 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 libldap-common all 2.6.10+dfsg-1ubuntu5 [36.0 kB]
-#9 8.266 Get:17 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 libldap2 arm64 2.6.10+dfsg-1ubuntu5 [200 kB]
-#9 8.279 Get:18 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 librtmp1 arm64 2.4+20151223.gitfa8646d.1-3 [58.7 kB]
-#9 8.297 Get:19 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 libssh2-1t64 arm64 1.11.1-1ubuntu0.26.04.4 [134 kB]
-#9 8.308 Get:20 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 libcurl3t64-gnutls arm64 8.18.0-1ubuntu2.8 [408 kB]
-#9 8.331 Get:21 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 perl-modules-5.40 all 5.40.1-7ubuntu0.3 [3,212 kB]
-#9 8.564 Get:22 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 libgdbm-compat4t64 arm64 1.26-1build1 [6,650 B]
-#9 8.564 Get:23 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 libperl5.40 arm64 5.40.1-7ubuntu0.3 [4,784 kB]
-#9 8.783 Get:24 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 perl arm64 5.40.1-7ubuntu0.3 [262 kB]
-#9 8.812 Get:25 http://ports.ubuntu.com/ubuntu-ports resolute/main arm64 liberror-perl all 0.17030-1 [23.5 kB]
-#9 8.812 Get:26 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 git-man all 1:2.53.0-1ubuntu1.1 [1,197 kB]
-#9 8.872 Get:27 http://ports.ubuntu.com/ubuntu-ports resolute-updates/main arm64 git arm64 1:2.53.0-1ubuntu1.1 [4,224 kB]
-#9 9.165 debconf: unable to initialize frontend: Dialog
-#9 9.165 debconf: (TERM is not set, so the dialog frontend is not usable.)
-#9 9.165 debconf: falling back to frontend: Readline
-#9 9.165 debconf: unable to initialize frontend: Readline
-#9 9.165 debconf: (Can't locate Term/ReadLine.pm in @INC (you may need to install the Term::ReadLine module) (@INC entries checked: /etc/perl /usr/local/lib/aarch64-linux-gnu/perl/5.40.1 /usr/local/share/perl/5.40.1 /usr/lib/aarch64-linux-gnu/perl5/5.40 /usr/share/perl5 /usr/lib/aarch64-linux-gnu/perl-base /usr/lib/aarch64-linux-gnu/perl/5.40 /usr/share/perl/5.40 /usr/local/lib/site_perl) at /usr/share/perl5/Debconf/FrontEnd/Readline.pm line 8, <STDIN> line 27.)
-#9 9.165 debconf: falling back to frontend: Teletype
-#9 9.168 debconf: unable to initialize frontend: Teletype
-#9 9.168 debconf: (This frontend requires a controlling tty.)
-#9 9.168 debconf: falling back to frontend: Noninteractive
-#9 9.654 Fetched 17.4 MB in 3s (5,882 kB/s)
-#9 9.665 Selecting previously unselected package libnettle8t64:arm64.
-#9 9.665 (Reading database ... 
-(Reading database ... 5%
-(Reading database ... 10%
-(Reading database ... 15%
-(Reading database ... 20%
-(Reading database ... 25%
-(Reading database ... 30%
-(Reading database ... 35%
-(Reading database ... 40%
-(Reading database ... 45%
-(Reading database ... 50%
-(Reading database ... 55%
-(Reading database ... 60%
-(Reading database ... 65%
-(Reading database ... 70%
-(Reading database ... 75%
-(Reading database ... 80%
-(Reading database ... 85%
-(Reading database ... 90%
-(Reading database ... 95%
-(Reading database ... 100%
-(Reading database ... 10317 files and directories currently installed.)
-#9 9.672 Preparing to unpack .../00-libnettle8t64_3.10.2-1_arm64.deb ...
-#9 9.674 Unpacking libnettle8t64:arm64 (3.10.2-1) ...
-#9 9.691 Selecting previously unselected package libhogweed6t64:arm64.
-#9 9.692 Preparing to unpack .../01-libhogweed6t64_3.10.2-1_arm64.deb ...
-#9 9.693 Unpacking libhogweed6t64:arm64 (3.10.2-1) ...
-#9 9.705 Selecting previously unselected package libunistring5:arm64.
-#9 9.706 Preparing to unpack .../02-libunistring5_1.3-2build1_arm64.deb ...
-#9 9.709 Unpacking libunistring5:arm64 (1.3-2build1) ...
-#9 9.729 Selecting previously unselected package libidn2-0:arm64.
-#9 9.730 Preparing to unpack .../03-libidn2-0_2.3.8-4build1_arm64.deb ...
-#9 9.731 Unpacking libidn2-0:arm64 (2.3.8-4build1) ...
-#9 9.745 Selecting previously unselected package libgnutls30t64:arm64.
-#9 9.745 Preparing to unpack .../04-libgnutls30t64_3.8.12-2ubuntu1.1_arm64.deb ...
-#9 9.747 Unpacking libgnutls30t64:arm64 (3.8.12-2ubuntu1.1) ...
-#9 9.767 Selecting previously unselected package libkrb5support0:arm64.
-#9 9.768 Preparing to unpack .../05-libkrb5support0_1.22.1-2ubuntu4.1_arm64.deb ...
-#9 9.769 Unpacking libkrb5support0:arm64 (1.22.1-2ubuntu4.1) ...
-#9 9.782 Selecting previously unselected package libk5crypto3:arm64.
-#9 9.782 Preparing to unpack .../06-libk5crypto3_1.22.1-2ubuntu4.1_arm64.deb ...
-#9 9.784 Unpacking libk5crypto3:arm64 (1.22.1-2ubuntu4.1) ...
-#9 9.798 Selecting previously unselected package libkeyutils1:arm64.
-#9 9.799 Preparing to unpack .../07-libkeyutils1_1.6.3-6ubuntu3_arm64.deb ...
-#9 9.801 Unpacking libkeyutils1:arm64 (1.6.3-6ubuntu3) ...
-#9 9.813 Selecting previously unselected package libkrb5-3:arm64.
-#9 9.813 Preparing to unpack .../08-libkrb5-3_1.22.1-2ubuntu4.1_arm64.deb ...
-#9 9.815 Unpacking libkrb5-3:arm64 (1.22.1-2ubuntu4.1) ...
-#9 9.832 Selecting previously unselected package libgssapi-krb5-2:arm64.
-#9 9.833 Preparing to unpack .../09-libgssapi-krb5-2_1.22.1-2ubuntu4.1_arm64.deb ...
-#9 9.834 Unpacking libgssapi-krb5-2:arm64 (1.22.1-2ubuntu4.1) ...
-#9 9.849 Selecting previously unselected package libgdbm6t64:arm64.
-#9 9.850 Preparing to unpack .../10-libgdbm6t64_1.26-1build1_arm64.deb ...
-#9 9.852 Unpacking libgdbm6t64:arm64 (1.26-1build1) ...
-#9 9.867 Selecting previously unselected package libnghttp2-14:arm64.
-#9 9.867 Preparing to unpack .../11-libnghttp2-14_1.68.0-2ubuntu0.2_arm64.deb ...
-#9 9.869 Unpacking libnghttp2-14:arm64 (1.68.0-2ubuntu0.2) ...
-#9 9.881 Selecting previously unselected package libpsl5t64:arm64.
-#9 9.881 Preparing to unpack .../12-libpsl5t64_0.21.2-1.1build2_arm64.deb ...
-#9 9.883 Unpacking libpsl5t64:arm64 (0.21.2-1.1build2) ...
-#9 9.893 Selecting previously unselected package libsasl2-modules-db:arm64.
-#9 9.893 Preparing to unpack .../13-libsasl2-modules-db_2.1.28+dfsg1-9ubuntu3_arm64.deb ...
-#9 9.895 Unpacking libsasl2-modules-db:arm64 (2.1.28+dfsg1-9ubuntu3) ...
-#9 9.905 Selecting previously unselected package libsasl2-2:arm64.
-#9 9.906 Preparing to unpack .../14-libsasl2-2_2.1.28+dfsg1-9ubuntu3_arm64.deb ...
-#9 9.908 Unpacking libsasl2-2:arm64 (2.1.28+dfsg1-9ubuntu3) ...
-#9 9.918 Selecting previously unselected package libldap-common.
-#9 9.919 Preparing to unpack .../15-libldap-common_2.6.10+dfsg-1ubuntu5_all.deb ...
-#9 9.920 Unpacking libldap-common (2.6.10+dfsg-1ubuntu5) ...
-#9 9.931 Selecting previously unselected package libldap2:arm64.
-#9 9.932 Preparing to unpack .../16-libldap2_2.6.10+dfsg-1ubuntu5_arm64.deb ...
-#9 9.933 Unpacking libldap2:arm64 (2.6.10+dfsg-1ubuntu5) ...
-#9 9.947 Selecting previously unselected package librtmp1:arm64.
-#9 9.948 Preparing to unpack .../17-librtmp1_2.4+20151223.gitfa8646d.1-3_arm64.deb ...
-#9 9.950 Unpacking librtmp1:arm64 (2.4+20151223.gitfa8646d.1-3) ...
-#9 9.963 Selecting previously unselected package libssh2-1t64:arm64.
-#9 9.964 Preparing to unpack .../18-libssh2-1t64_1.11.1-1ubuntu0.26.04.4_arm64.deb ...
-#9 9.966 Unpacking libssh2-1t64:arm64 (1.11.1-1ubuntu0.26.04.4) ...
-#9 9.978 Selecting previously unselected package libcurl3t64-gnutls:arm64.
-#9 9.979 Preparing to unpack .../19-libcurl3t64-gnutls_8.18.0-1ubuntu2.8_arm64.deb ...
-#9 9.980 Unpacking libcurl3t64-gnutls:arm64 (8.18.0-1ubuntu2.8) ...
-#9 9.993 Selecting previously unselected package perl-modules-5.40.
-#9 9.994 Preparing to unpack .../20-perl-modules-5.40_5.40.1-7ubuntu0.3_all.deb ...
-#9 9.995 Unpacking perl-modules-5.40 (5.40.1-7ubuntu0.3) ...
-#9 10.17 Selecting previously unselected package libgdbm-compat4t64:arm64.
-#9 10.17 Preparing to unpack .../21-libgdbm-compat4t64_1.26-1build1_arm64.deb ...
-#9 10.17 Unpacking libgdbm-compat4t64:arm64 (1.26-1build1) ...
-#9 10.18 Selecting previously unselected package libperl5.40:arm64.
-#9 10.18 Preparing to unpack .../22-libperl5.40_5.40.1-7ubuntu0.3_arm64.deb ...
-#9 10.19 Unpacking libperl5.40:arm64 (5.40.1-7ubuntu0.3) ...
-#9 10.34 Selecting previously unselected package perl.
-#9 10.34 Preparing to unpack .../23-perl_5.40.1-7ubuntu0.3_arm64.deb ...
-#9 10.34 Unpacking perl (5.40.1-7ubuntu0.3) ...
-#9 10.36 Selecting previously unselected package liberror-perl.
-#9 10.36 Preparing to unpack .../24-liberror-perl_0.17030-1_all.deb ...
-#9 10.36 Unpacking liberror-perl (0.17030-1) ...
-#9 10.38 Selecting previously unselected package git-man.
-#9 10.38 Preparing to unpack .../25-git-man_1%3a2.53.0-1ubuntu1.1_all.deb ...
-#9 10.38 Unpacking git-man (1:2.53.0-1ubuntu1.1) ...
-#9 10.40 Selecting previously unselected package git.
-#9 10.40 Preparing to unpack .../26-git_1%3a2.53.0-1ubuntu1.1_arm64.deb ...
-#9 10.40 Unpacking git (1:2.53.0-1ubuntu1.1) ...
-#9 10.51 Setting up libkeyutils1:arm64 (1.6.3-6ubuntu3) ...
-#9 10.51 Setting up libgdbm6t64:arm64 (1.26-1build1) ...
-#9 10.51 Setting up libgdbm-compat4t64:arm64 (1.26-1build1) ...
-#9 10.52 Setting up libnghttp2-14:arm64 (1.68.0-2ubuntu0.2) ...
-#9 10.52 Setting up libldap-common (2.6.10+dfsg-1ubuntu5) ...
-#9 10.52 Setting up libkrb5support0:arm64 (1.22.1-2ubuntu4.1) ...
-#9 10.53 Setting up libsasl2-modules-db:arm64 (2.1.28+dfsg1-9ubuntu3) ...
-#9 10.53 Setting up libnettle8t64:arm64 (3.10.2-1) ...
-#9 10.53 Setting up libunistring5:arm64 (1.3-2build1) ...
-#9 10.54 Setting up libk5crypto3:arm64 (1.22.1-2ubuntu4.1) ...
-#9 10.54 Setting up libsasl2-2:arm64 (2.1.28+dfsg1-9ubuntu3) ...
-#9 10.54 Setting up libhogweed6t64:arm64 (3.10.2-1) ...
-#9 10.55 Setting up perl-modules-5.40 (5.40.1-7ubuntu0.3) ...
-#9 10.55 Setting up git-man (1:2.53.0-1ubuntu1.1) ...
-#9 10.55 Setting up libkrb5-3:arm64 (1.22.1-2ubuntu4.1) ...
-#9 10.56 Setting up libssh2-1t64:arm64 (1.11.1-1ubuntu0.26.04.4) ...
-#9 10.56 Setting up libldap2:arm64 (2.6.10+dfsg-1ubuntu5) ...
-#9 10.57 Setting up libidn2-0:arm64 (2.3.8-4build1) ...
-#9 10.57 Setting up libperl5.40:arm64 (5.40.1-7ubuntu0.3) ...
-#9 10.57 Setting up perl (5.40.1-7ubuntu0.3) ...
-#9 10.58 Setting up libgssapi-krb5-2:arm64 (1.22.1-2ubuntu4.1) ...
-#9 10.58 Setting up libgnutls30t64:arm64 (3.8.12-2ubuntu1.1) ...
-#9 10.59 Setting up libpsl5t64:arm64 (0.21.2-1.1build2) ...
-#9 10.59 Setting up liberror-perl (0.17030-1) ...
-#9 10.59 Setting up librtmp1:arm64 (2.4+20151223.gitfa8646d.1-3) ...
-#9 10.60 Setting up libcurl3t64-gnutls:arm64 (8.18.0-1ubuntu2.8) ...
-#9 10.60 Setting up git (1:2.53.0-1ubuntu1.1) ...
-#9 10.61 Processing triggers for libc-bin (2.43-2ubuntu2.4) ...
-#9 DONE 10.7s
+#9 11.00 Fetched 17.4 MB in 3s (5,958 kB/s)
+#9 11.02 Selecting previously unselected package libnettle8t64:arm64.
+#9 11.02 (Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 10317 files and directories currently installed.)
+#9 11.02 Preparing to unpack .../00-libnettle8t64_3.10.2-1_arm64.deb ...
+#9 11.03 Unpacking libnettle8t64:arm64 (3.10.2-1) ...
+#9 11.04 Selecting previously unselected package libhogweed6t64:arm64.
+#9 11.04 Preparing to unpack .../01-libhogweed6t64_3.10.2-1_arm64.deb ...
+#9 11.04 Unpacking libhogweed6t64:arm64 (3.10.2-1) ...
+#9 11.06 Selecting previously unselected package libunistring5:arm64.
+#9 11.06 Preparing to unpack .../02-libunistring5_1.3-2build1_arm64.deb ...
+#9 11.06 Unpacking libunistring5:arm64 (1.3-2build1) ...
+#9 11.08 Selecting previously unselected package libidn2-0:arm64.
+#9 11.08 Preparing to unpack .../03-libidn2-0_2.3.8-4build1_arm64.deb ...
+#9 11.08 Unpacking libidn2-0:arm64 (2.3.8-4build1) ...
+#9 11.09 Selecting previously unselected package libgnutls30t64:arm64.
+#9 11.09 Preparing to unpack .../04-libgnutls30t64_3.8.12-2ubuntu1.1_arm64.deb ...
+#9 11.09 Unpacking libgnutls30t64:arm64 (3.8.12-2ubuntu1.1) ...
+#9 11.11 Selecting previously unselected package libkrb5support0:arm64.
+#9 11.11 Preparing to unpack .../05-libkrb5support0_1.22.1-2ubuntu4.1_arm64.deb ...
+#9 11.11 Unpacking libkrb5support0:arm64 (1.22.1-2ubuntu4.1) ...
+#9 11.12 Selecting previously unselected package libk5crypto3:arm64.
+#9 11.12 Preparing to unpack .../06-libk5crypto3_1.22.1-2ubuntu4.1_arm64.deb ...
+#9 11.13 Unpacking libk5crypto3:arm64 (1.22.1-2ubuntu4.1) ...
+#9 11.14 Selecting previously unselected package libkeyutils1:arm64.
+#9 11.14 Preparing to unpack .../07-libkeyutils1_1.6.3-6ubuntu3_arm64.deb ...
+#9 11.14 Unpacking libkeyutils1:arm64 (1.6.3-6ubuntu3) ...
+#9 11.15 Selecting previously unselected package libkrb5-3:arm64.
+#9 11.15 Preparing to unpack .../08-libkrb5-3_1.22.1-2ubuntu4.1_arm64.deb ...
+#9 11.15 Unpacking libkrb5-3:arm64 (1.22.1-2ubuntu4.1) ...
+#9 11.17 Selecting previously unselected package libgssapi-krb5-2:arm64.
+#9 11.17 Preparing to unpack .../09-libgssapi-krb5-2_1.22.1-2ubuntu4.1_arm64.deb ...
+#9 11.17 Unpacking libgssapi-krb5-2:arm64 (1.22.1-2ubuntu4.1) ...
+#9 11.18 Selecting previously unselected package libgdbm6t64:arm64.
+#9 11.18 Preparing to unpack .../10-libgdbm6t64_1.26-1build1_arm64.deb ...
+#9 11.18 Unpacking libgdbm6t64:arm64 (1.26-1build1) ...
+#9 11.19 Selecting previously unselected package libnghttp2-14:arm64.
+#9 11.19 Preparing to unpack .../11-libnghttp2-14_1.68.0-2ubuntu0.2_arm64.deb ...
+#9 11.20 Unpacking libnghttp2-14:arm64 (1.68.0-2ubuntu0.2) ...
+#9 11.21 Selecting previously unselected package libpsl5t64:arm64.
+#9 11.21 Preparing to unpack .../12-libpsl5t64_0.21.2-1.1build2_arm64.deb ...
+#9 11.21 Unpacking libpsl5t64:arm64 (0.21.2-1.1build2) ...
+#9 11.22 Selecting previously unselected package libsasl2-modules-db:arm64.
+#9 11.22 Preparing to unpack .../13-libsasl2-modules-db_2.1.28+dfsg1-9ubuntu3_arm64.deb ...
+#9 11.22 Unpacking libsasl2-modules-db:arm64 (2.1.28+dfsg1-9ubuntu3) ...
+#9 11.23 Selecting previously unselected package libsasl2-2:arm64.
+#9 11.23 Preparing to unpack .../14-libsasl2-2_2.1.28+dfsg1-9ubuntu3_arm64.deb ...
+#9 11.23 Unpacking libsasl2-2:arm64 (2.1.28+dfsg1-9ubuntu3) ...
+#9 11.24 Selecting previously unselected package libldap-common.
+#9 11.24 Preparing to unpack .../15-libldap-common_2.6.10+dfsg-1ubuntu5_all.deb ...
+#9 11.24 Unpacking libldap-common (2.6.10+dfsg-1ubuntu5) ...
+#9 11.25 Selecting previously unselected package libldap2:arm64.
+#9 11.25 Preparing to unpack .../16-libldap2_2.6.10+dfsg-1ubuntu5_arm64.deb ...
+#9 11.26 Unpacking libldap2:arm64 (2.6.10+dfsg-1ubuntu5) ...
+#9 11.27 Selecting previously unselected package librtmp1:arm64.
+#9 11.27 Preparing to unpack .../17-librtmp1_2.4+20151223.gitfa8646d.1-3_arm64.deb ...
+#9 11.27 Unpacking librtmp1:arm64 (2.4+20151223.gitfa8646d.1-3) ...
+#9 11.28 Selecting previously unselected package libssh2-1t64:arm64.
+#9 11.28 Preparing to unpack .../18-libssh2-1t64_1.11.1-1ubuntu0.26.04.4_arm64.deb ...
+#9 11.28 Unpacking libssh2-1t64:arm64 (1.11.1-1ubuntu0.26.04.4) ...
+#9 11.29 Selecting previously unselected package libcurl3t64-gnutls:arm64.
+#9 11.30 Preparing to unpack .../19-libcurl3t64-gnutls_8.18.0-1ubuntu2.8_arm64.deb ...
+#9 11.30 Unpacking libcurl3t64-gnutls:arm64 (8.18.0-1ubuntu2.8) ...
+#9 11.31 Selecting previously unselected package perl-modules-5.40.
+#9 11.31 Preparing to unpack .../20-perl-modules-5.40_5.40.1-7ubuntu0.3_all.deb ...
+#9 11.32 Unpacking perl-modules-5.40 (5.40.1-7ubuntu0.3) ...
+#9 11.46 Selecting previously unselected package libgdbm-compat4t64:arm64.
+#9 11.46 Preparing to unpack .../21-libgdbm-compat4t64_1.26-1build1_arm64.deb ...
+#9 11.46 Unpacking libgdbm-compat4t64:arm64 (1.26-1build1) ...
+#9 11.47 Selecting previously unselected package libperl5.40:arm64.
+#9 11.47 Preparing to unpack .../22-libperl5.40_5.40.1-7ubuntu0.3_arm64.deb ...
+#9 11.47 Unpacking libperl5.40:arm64 (5.40.1-7ubuntu0.3) ...
+#9 11.61 Selecting previously unselected package perl.
+#9 11.61 Preparing to unpack .../23-perl_5.40.1-7ubuntu0.3_arm64.deb ...
+#9 11.61 Unpacking perl (5.40.1-7ubuntu0.3) ...
+#9 11.63 Selecting previously unselected package liberror-perl.
+#9 11.63 Preparing to unpack .../24-liberror-perl_0.17030-1_all.deb ...
+#9 11.63 Unpacking liberror-perl (0.17030-1) ...
+#9 11.64 Selecting previously unselected package git-man.
+#9 11.64 Preparing to unpack .../25-git-man_1%3a2.53.0-1ubuntu1.1_all.deb ...
+#9 11.64 Unpacking git-man (1:2.53.0-1ubuntu1.1) ...
+#9 11.66 Selecting previously unselected package git.
+#9 11.66 Preparing to unpack .../26-git_1%3a2.53.0-1ubuntu1.1_arm64.deb ...
+#9 11.66 Unpacking git (1:2.53.0-1ubuntu1.1) ...
+#9 11.76 Setting up libkeyutils1:arm64 (1.6.3-6ubuntu3) ...
+#9 11.76 Setting up libgdbm6t64:arm64 (1.26-1build1) ...
+#9 11.77 Setting up libgdbm-compat4t64:arm64 (1.26-1build1) ...
+#9 11.77 Setting up libnghttp2-14:arm64 (1.68.0-2ubuntu0.2) ...
+#9 11.77 Setting up libldap-common (2.6.10+dfsg-1ubuntu5) ...
+#9 11.78 Setting up libkrb5support0:arm64 (1.22.1-2ubuntu4.1) ...
+#9 11.78 Setting up libsasl2-modules-db:arm64 (2.1.28+dfsg1-9ubuntu3) ...
+#9 11.78 Setting up libnettle8t64:arm64 (3.10.2-1) ...
+#9 11.79 Setting up libunistring5:arm64 (1.3-2build1) ...
+#9 11.79 Setting up libk5crypto3:arm64 (1.22.1-2ubuntu4.1) ...
+#9 11.79 Setting up libsasl2-2:arm64 (2.1.28+dfsg1-9ubuntu3) ...
+#9 11.80 Setting up libhogweed6t64:arm64 (3.10.2-1) ...
+#9 11.80 Setting up perl-modules-5.40 (5.40.1-7ubuntu0.3) ...
+#9 11.81 Setting up git-man (1:2.53.0-1ubuntu1.1) ...
+#9 11.81 Setting up libkrb5-3:arm64 (1.22.1-2ubuntu4.1) ...
+#9 11.81 Setting up libssh2-1t64:arm64 (1.11.1-1ubuntu0.26.04.4) ...
+#9 11.81 Setting up libldap2:arm64 (2.6.10+dfsg-1ubuntu5) ...
+#9 11.82 Setting up libidn2-0:arm64 (2.3.8-4build1) ...
+#9 11.82 Setting up libperl5.40:arm64 (5.40.1-7ubuntu0.3) ...
+#9 11.82 Setting up perl (5.40.1-7ubuntu0.3) ...
+#9 11.83 Setting up libgssapi-krb5-2:arm64 (1.22.1-2ubuntu4.1) ...
+#9 11.83 Setting up libgnutls30t64:arm64 (3.8.12-2ubuntu1.1) ...
+#9 11.84 Setting up libpsl5t64:arm64 (0.21.2-1.1build2) ...
+#9 11.84 Setting up liberror-perl (0.17030-1) ...
+#9 11.84 Setting up librtmp1:arm64 (2.4+20151223.gitfa8646d.1-3) ...
+#9 11.85 Setting up libcurl3t64-gnutls:arm64 (8.18.0-1ubuntu2.8) ...
+#9 11.85 Setting up git (1:2.53.0-1ubuntu1.1) ...
+#9 11.86 Processing triggers for libc-bin (2.43-2ubuntu2.4) ...
+#9 DONE 12.0s
 
 #12 [builder 3/5] WORKDIR /src
 #12 DONE 0.0s
 
 #13 [builder 4/5] RUN git clone --depth 1 --branch "1.16.1" https://github.com/apache/fineract.git .  && actual="$(git rev-parse HEAD)"  && echo "Fineract 1.16.1 at commit ${actual}"  && if [ "${actual}" != "c643dab306fe29798951591ce825fd5e5272923e" ]; then       echo "ERROR: tag 1.16.1 is ${actual}, expected c643dab306fe29798951591ce825fd5e5272923e" >&2; exit 1;     fi
-#13 0.094 Cloning into '.'...
-#13 5.052 warning: refs/tags/1.16.1 e9c7b4cda9a4071168258f80cd6c80dffab2f3d0 is not a commit!
-#13 5.053 Note: switching to 'c643dab306fe29798951591ce825fd5e5272923e'.
-#13 5.053 
-#13 5.053 You are in 'detached HEAD' state. You can look around, make experimental
-#13 5.053 changes and commit them, and you can discard any commits you make in this
-#13 5.053 state without impacting any branches by switching back to a branch.
-#13 5.053 
-#13 5.053 If you want to create a new branch to retain commits you create, you may
-#13 5.053 do so (now or later) by using -c with the switch command. Example:
-#13 5.053 
-#13 5.053   git switch -c <new-branch-name>
-#13 5.053 
-#13 5.053 Or undo this operation with:
-#13 5.053 
-#13 5.053   git switch -
-#13 5.053 
-#13 5.053 Turn off this advice by setting config variable advice.detachedHead to false
-#13 5.053 
-#13 6.037 Fineract 1.16.1 at commit c643dab306fe29798951591ce825fd5e5272923e
-#13 DONE 6.2s
+#13 0.107 Cloning into '.'...
+#13 5.117 warning: refs/tags/1.16.1 e9c7b4cda9a4071168258f80cd6c80dffab2f3d0 is not a commit!
+#13 5.117 Note: switching to 'c643dab306fe29798951591ce825fd5e5272923e'.
+#13 5.117 
+#13 5.117 You are in 'detached HEAD' state. You can look around, make experimental
+#13 5.117 changes and commit them, and you can discard any commits you make in this
+#13 5.117 state without impacting any branches by switching back to a branch.
+#13 5.117 
+#13 5.117 If you want to create a new branch to retain commits you create, you may
+#13 5.117 do so (now or later) by using -c with the switch command. Example:
+#13 5.117 
+#13 5.117   git switch -c <new-branch-name>
+#13 5.117 
+#13 5.117 Or undo this operation with:
+#13 5.117 
+#13 5.117   git switch -
+#13 5.117 
+#13 5.117 Turn off this advice by setting config variable advice.detachedHead to false
+#13 5.117 
+#13 5.604 Fineract 1.16.1 at commit c643dab306fe29798951591ce825fd5e5272923e
+#13 DONE 5.7s
 
-#14 [builder 5/5] RUN --mount=type=cache,target=/root/.gradle     jvmargs="$(grep '^org.gradle.jvmargs=' gradle.properties | cut -d= -f2- | sed "s/-Xmx[0-9]*[gGmM]/-Xmx4g/")"  && ./gradlew --no-daemon --console=plain --max-workers="2"       -Dorg.gradle.jvmargs="${jvmargs}"       :fineract-provider:bootJar -x test -x cucumber -x buildJavaSdk  && jar="$(ls fineract-provider/build/libs/fineract-provider-*.jar | grep -v -- '-plain.jar$')"  && cp "${jar}" /fineract-provider.jar  && echo "Built ${jar}"
-#14 0.186 Fetching distribution (retrying 3 times, with an initial back off of 500 ms).
-#14 0.186 Downloading https://services.gradle.org/distributions/gradle-9.7.1-bin.zip
-#14 2.392 ..............10%..............20%...............30%..............40%...............50%..............60%...............70%..............80%..............90%...............100%
-#14 10.24 
-#14 10.24 Welcome to Gradle 9.7.1!
-#14 10.24 
-#14 10.24 Here are the highlights of this release:
-#14 10.24  - Isolated Projects graduates to incubating
-#14 10.24  - Broader Configuration Cache compatibility
-#14 10.24  - Resilient Sync helps you fix broken builds
-#14 10.24  - More source locations in problem reports
-#14 10.24 
-#14 10.24 For more details see https://docs.gradle.org/9.7.1/release-notes.html
-#14 10.24 
-#14 10.34 To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.7.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
-#14 10.94 Daemon will be stopped at the end of the build 
+#14 [builder 5/5] RUN --mount=type=cache,target=/root/.gradle     jvmargs="$(grep '^org.gradle.jvmargs=' gradle.properties | cut -d= -f2- | sed "s/-Xmx[0-9]*[gGmM]/-Xmx4g/")"  && ./gradlew --no-daemon --console=plain --max-workers="2"       -Dorg.gradle.jvmargs="${jvmargs}"       :fineract-provider:bootJar -x test -x cucumber  && jar="$(ls fineract-provider/build/libs/fineract-provider-*.jar | grep -v -- '-plain.jar$')"  && cp "${jar}" /fineract-provider.jar  && echo "Built ${jar}"
+#14 0.202 Fetching distribution (retrying 3 times, with an initial back off of 500 ms).
+#14 0.202 Downloading https://services.gradle.org/distributions/gradle-9.7.1-bin.zip
+#14 2.415 ..............10%..............20%...............30%..............40%...............50%..............60%...............70%..............80%..............90%...............100%
+#14 9.841 
+#14 9.841 Welcome to Gradle 9.7.1!
+#14 9.841 
+#14 9.841 Here are the highlights of this release:
+#14 9.841  - Isolated Projects graduates to incubating
+#14 9.841  - Broader Configuration Cache compatibility
+#14 9.841  - Resilient Sync helps you fix broken builds
+#14 9.841  - More source locations in problem reports
+#14 9.841 
+#14 9.841 For more details see https://docs.gradle.org/9.7.1/release-notes.html
+#14 9.841 
+#14 9.943 To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.7.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+#14 10.54 Daemon will be stopped at the end of the build 
+#14 46.85 > Task :buildSrc:extractPluginRequests
+#14 46.85 > Task :buildSrc:generatePluginAdapters
+#14 68.24 > Task :buildSrc:compileJava
+#14 72.24 > Task :buildSrc:compileGroovy
+#14 72.74 > Task :buildSrc:compileGroovyPlugins
+#14 72.74 > Task :buildSrc:pluginDescriptors
+#14 72.74 > Task :buildSrc:processResources
+#14 72.74 > Task :buildSrc:classes
+#14 72.85 > Task :buildSrc:jar
+#14 220.1 
+#14 220.1 > Configure project :
+#14 220.1 project version: 1.16.1
+#14 293.5 
+#14 293.5 > Task :fineract-avro-schemas:preprocessAvroSchemas
+#14 293.7 
+#14 293.7 > Task :fineract-accounting:generateStaticWeavingPersistenceXml
+#14 293.7 Generated EclipseLink static weaving persistence.xml for :fineract-accounting with 55 managed classes from 4 modules
+#14 293.8 
+#14 293.8 > Task :fineract-charge:generateStaticWeavingPersistenceXml
+#14 293.8 Generated EclipseLink static weaving persistence.xml for :fineract-charge with 47 managed classes from 3 modules
+#14 293.9 
+#14 293.9 > Task :fineract-avro-schemas:spotlessJson
+#14 293.9 > Task :fineract-avro-schemas:spotlessJsonApply
+#14 297.0 > Task :fineract-avro-schemas:buildJavaSdk
+#14 304.6 WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+#14 304.6 WARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit
+#14 304.6 WARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit
+#14 304.6 WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+#14 305.8 > Task :fineract-avro-schemas:compileJava
+#14 305.8 > Task :fineract-avro-schemas:processResources
+#14 305.8 > Task :fineract-avro-schemas:classes
+#14 306.0 > Task :fineract-avro-schemas:jar
+#14 306.2 
+#14 306.2 > Task :fineract-core:generateStaticWeavingPersistenceXml
+#14 306.2 Generated EclipseLink static weaving persistence.xml for :fineract-core with 40 managed classes from 1 modules
+#14 308.4 WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+#14 308.4 WARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit
+#14 308.4 WARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit
+#14 308.4 WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+#14 308.6 
+#14 308.6 > Task :fineract-command:compileJava
+#14 308.6 > Task :fineract-command:processResources
+#14 308.6 > Task :fineract-command:classes
+#14 308.6 > Task :fineract-command:jar
+#14 308.6 > Task :fineract-core:processResources NO-SOURCE
+#14 308.7 
+#14 308.7 > Task :fineract-tax:generateStaticWeavingPersistenceXml
+#14 308.7 Generated EclipseLink static weaving persistence.xml for :fineract-tax with 44 managed classes from 2 modules
+#14 308.7 
+#14 308.7 > Task :fineract-tax:processResources NO-SOURCE
+#14 308.7 > Task :fineract-charge:processResources
+#14 308.7 > Task :fineract-accounting:processResources
+#14 308.8 
+#14 308.8 > Task :fineract-branch:generateStaticWeavingPersistenceXml
+#14 308.8 Generated EclipseLink static weaving persistence.xml for :fineract-branch with 59 managed classes from 5 modules
+#14 308.9 
+#14 308.9 > Task :fineract-branch:processResources
+#14 309.0 
+#14 309.0 > Task :fineract-cob:generateStaticWeavingPersistenceXml
+#14 309.0 Generated EclipseLink static weaving persistence.xml for :fineract-cob with 42 managed classes from 2 modules
+#14 309.0 
+#14 309.0 > Task :fineract-cob:processResources NO-SOURCE
+#14 309.0 > Task :fineract-validation:compileJava
+#14 309.0 > Task :fineract-validation:processResources
+#14 309.0 > Task :fineract-validation:classes
+#14 309.0 > Task :fineract-validation:jar
+#14 309.2 > Task :fineract-command-audit:compileJava
+#14 309.2 > Task :fineract-command-audit:processResources
+#14 309.2 > Task :fineract-command-audit:classes
+#14 309.2 > Task :fineract-command-audit:jar
+#14 314.8 > Task :fineract-command-jdbc:compileJava
+#14 314.8 > Task :fineract-command-jdbc:processResources
+#14 314.8 > Task :fineract-command-jdbc:classes
+#14 314.8 > Task :fineract-command-jdbc:jar
+#14 314.8 > Task :fineract-document:processResources NO-SOURCE
+#14 315.2 
+#14 315.2 > Task :fineract-investor:generateStaticWeavingPersistenceXml
+#14 315.2 Generated EclipseLink static weaving persistence.xml for :fineract-investor with 122 managed classes from 8 modules
+#14 315.5 
+#14 315.5 > Task :fineract-loan:generateStaticWeavingPersistenceXml
+#14 315.5 Generated EclipseLink static weaving persistence.xml for :fineract-loan with 114 managed classes from 7 modules
+#14 315.6 
+#14 315.6 > Task :fineract-rates:generateStaticWeavingPersistenceXml
+#14 315.6 Generated EclipseLink static weaving persistence.xml for :fineract-rates with 42 managed classes from 2 modules
+#14 315.6 
+#14 315.6 > Task :fineract-rates:processResources
+#14 315.6 > Task :fineract-loan:processResources
+#14 315.6 > Task :fineract-investor:processResources
+#14 316.0 
+#14 316.0 > Task :fineract-loan-origination:generateStaticWeavingPersistenceXml
+#14 316.0 Generated EclipseLink static weaving persistence.xml for :fineract-loan-origination with 142 managed classes from 9 modules
+#14 316.3 
+#14 316.3 > Task :fineract-working-capital-loan:generateStaticWeavingPersistenceXml
+#14 316.3 Generated EclipseLink static weaving persistence.xml for :fineract-working-capital-loan with 139 managed classes from 8 modules
+#14 316.4 
+#14 316.4 > Task :fineract-working-capital-loan:processResources
+#14 316.4 > Task :fineract-loan-origination:processResources
+#14 316.7 
+#14 316.7 > Task :fineract-progressive-loan:generateStaticWeavingPersistenceXml
+#14 316.7 Generated EclipseLink static weaving persistence.xml for :fineract-progressive-loan with 117 managed classes from 8 modules
+#14 316.7 
+#14 316.7 > Task :fineract-progressive-loan:processResources
+#14 318.0 
+#14 318.0 > Task :fineract-provider:generateStaticWeavingPersistenceXml
+#14 318.0 Generated EclipseLink static weaving persistence.xml for :fineract-provider with 272 managed classes from 15 modules
+#14 318.0 
+#14 318.0 > Task :fineract-report:processResources NO-SOURCE
+#14 318.2 
+#14 318.2 > Task :fineract-savings:generateStaticWeavingPersistenceXml
+#14 318.2 Generated EclipseLink static weaving persistence.xml for :fineract-savings with 82 managed classes from 7 modules
+#14 318.2 
+#14 318.2 > Task :fineract-savings:processResources
+#14 318.3 
+#14 318.3 > Task :fineract-security:generateStaticWeavingPersistenceXml
+#14 318.3 Generated EclipseLink static weaving persistence.xml for :fineract-security with 42 managed classes from 2 modules
+#14 318.3 
+#14 318.3 > Task :fineract-security:processResources NO-SOURCE
+#14 319.0 > Task :fineract-provider:generateGitProperties
+#14 319.0 > Task :fineract-provider:generateRebelMain
+#14 319.2 > Task :fineract-provider:processResources
+#14 319.2 > Task :fineract-provider:prepareInputYaml
+#14 326.5 
+#14 326.5 > Task :fineract-core:compileJava
+#14 326.5 /src/fineract-core/src/main/java/org/apache/fineract/infrastructure/core/service/database/JavaType.java:364: warning: [deprecation] Date(String) in Date has been deprecated
+#14 326.5             case DATE -> new Date(s);
+#14 326.5                          ^
+#14 327.8 1 warning
+#14 334.6 
+#14 334.6 > Task :fineract-core:classes
+#14 334.7 > Task :fineract-core:jar
+#14 336.7 > Task :fineract-tax:compileJava
+#14 336.7 > Task :fineract-tax:classes
+#14 336.7 > Task :fineract-cob:compileJava
+#14 336.7 > Task :fineract-cob:classes
+#14 336.7 > Task :fineract-tax:jar
+#14 336.7 > Task :fineract-cob:jar
+#14 337.7 > Task :fineract-charge:compileJava
+#14 337.7 > Task :fineract-charge:classes
+#14 337.7 > Task :fineract-charge:jar
+#14 340.1 > Task :fineract-accounting:compileJava
+#14 340.1 > Task :fineract-accounting:classes
+#14 340.1 > Task :fineract-accounting:jar
+#14 341.2 > Task :fineract-branch:compileJava
+#14 341.2 > Task :fineract-branch:classes
+#14 341.2 > Task :fineract-branch:jar
+#14 342.1 > Task :fineract-rates:compileJava
+#14 342.1 > Task :fineract-rates:classes
+#14 342.1 > Task :fineract-rates:jar
+#14 344.8 
+#14 344.8 > Task :fineract-document:compileJava
+#14 344.8 /src/fineract-document/src/main/java/org/apache/fineract/infrastructure/documentmanagement/service/ImageReadPlatformServiceImpl.java:47: warning: [deprecation] EntityImageIdAdapter in org.apache.fineract.infrastructure.documentmanagement.adapter has been deprecated
+#14 344.8         return imageIdAdapters.stream().filter(imageIdAdapter -> imageIdAdapter.accept(entityType)).findFirst()
+#14 344.8                                                ^
+#14 344.8 /src/fineract-document/src/main/java/org/apache/fineract/infrastructure/documentmanagement/service/ImageReadPlatformServiceImpl.java:48: warning: [deprecation] EntityImageIdAdapter in org.apache.fineract.infrastructure.documentmanagement.adapter has been deprecated
+#14 344.8                 .flatMap(imageIdAdapter -> imageIdAdapter.get(entityId))
+#14 344.8                          ^
+#14 344.8 /src/fineract-document/src/main/java/org/apache/fineract/infrastructure/documentmanagement/service/ImageReadPlatformServiceImpl.java:49: warning: [deprecation] EntityImageIdAdapter in org.apache.fineract.infrastructure.documentmanagement.adapter has been deprecated
+#14 344.8                 .flatMap(imageIdResult -> imageRepository.findById(imageIdResult.getId()).map(image -> DocumentContent.builder()
+#14 344.8                          ^
+#14 344.8 /src/fineract-document/src/main/java/org/apache/fineract/infrastructure/documentmanagement/service/ImageReadPlatformServiceImpl.java:35: warning: [deprecation] EntityImageIdAdapter in org.apache.fineract.infrastructure.documentmanagement.adapter has been deprecated
+#14 344.8 @RequiredArgsConstructor
+#14 344.8 ^
+#14 344.8 /src/fineract-document/src/main/java/org/apache/fineract/infrastructure/documentmanagement/service/ImageReadPlatformServiceImpl.java:35: warning: [deprecation] EntityImageIdAdapter in org.apache.fineract.infrastructure.documentmanagement.adapter has been deprecated
+#14 344.8 @RequiredArgsConstructor
+#14 344.8 ^
+#14 344.8 /src/fineract-document/src/main/java/org/apache/fineract/infrastructure/documentmanagement/service/ImageReadPlatformServiceImpl.java:35: warning: [deprecation] EntityImageIdAdapter in org.apache.fineract.infrastructure.documentmanagement.adapter has been deprecated
+#14 344.8 @RequiredArgsConstructor
+#14 344.8 ^
+#14 344.8 /src/fineract-document/src/main/java/org/apache/fineract/infrastructure/documentmanagement/service/ImageReadPlatformServiceImpl.java:35: warning: [deprecation] EntityImageIdAdapter in org.apache.fineract.infrastructure.documentmanagement.adapter has been deprecated
+#14 344.8 @RequiredArgsConstructor
+#14 344.8 ^
+#14 344.8 /src/fineract-document/src/main/java/org/apache/fineract/infrastructure/documentmanagement/service/ImageReadPlatformServiceImpl.java:35: warning: [deprecation] EntityImageIdAdapter in org.apache.fineract.infrastructure.documentmanagement.adapter has been deprecated
+#14 344.8 @RequiredArgsConstructor
+#14 344.8 ^
+#14 344.8 /src/fineract-document/src/main/java/org/apache/fineract/infrastructure/documentmanagement/service/ImageReadPlatformServiceImpl.java:35: warning: [deprecation] EntityImageIdAdapter in org.apache.fineract.infrastructure.documentmanagement.adapter has been deprecated
+#14 344.8 @RequiredArgsConstructor
+#14 344.8 ^
+#14 344.8 /src/fineract-document/src/main/java/org/apache/fineract/infrastructure/documentmanagement/service/ImageReadPlatformServiceImpl.java:35: warning: [deprecation] EntityImageIdAdapter in org.apache.fineract.infrastructure.documentmanagement.adapter has been deprecated
+#14 344.8 @RequiredArgsConstructor
+#14 344.8 ^
+#14 344.8 /src/fineract-document/src/main/java/org/apache/fineract/infrastructure/documentmanagement/service/ImageWritePlatformServiceImpl.java:91: warning: [deprecation] EntityImageIdAdapter in org.apache.fineract.infrastructure.documentmanagement.adapter has been deprecated
+#14 344.8             final var result = imageIdAdapters.stream().filter(imageIdAdapter -> imageIdAdapter.accept(imageEntityType)).findFirst()
+#14 344.8                                                                ^
+#14 344.8 /src/fineract-document/src/main/java/org/apache/fineract/infrastructure/documentmanagement/service/ImageWritePlatformServiceImpl.java:92: warning: [deprecation] EntityImageIdAdapter in org.apache.fineract.infrastructure.documentmanagement.adapter has been deprecated
+#14 344.8                     .flatMap(imageIdAdapter -> imageIdAdapter.get(request.getEntityId()))
+#14 344.8                              ^
+#14 344.8 /src/fineract-document/src/main/java/org/apache/fineract/infrastructure/documentmanagement/service/ImageWritePlatformServiceImpl.java:93: warning: [deprecation] EntityImageIdAdapter in org.apache.fineract.infrastructure.documentmanagement.adapter has been deprecated
+#14 344.8                     .flatMap(imageIdResult -> imageRepository.findById(imageIdResult.getId())).map(image -> {
+#14 344.8                              ^
+#14 344.8 /src/fineract-document/src/main/java/org/apache/fineract/infrastructure/documentmanagement/service/ImageWritePlatformServiceImpl.java:102: warning: [deprecation] EntityImageIdAdapter in org.apache.fineract.infrastructure.documentmanagement.adapter has been deprecated
+#14 344.8             imageIdAdapters.stream().filter(imageIdAdapter -> imageIdAdapter.accept(imageEntityType)).findFirst()
+#14 344.8                                             ^
+#14 344.8 /src/fineract-document/src/main/java/org/apache/fineract/infrastructure/documentmanagement/service/ImageWritePlatformServiceImpl.java:103: warning: [deprecation] EntityImageIdAdapter in org.apache.fineract.infrastructure.documentmanagement.adapter has been deprecated
+#14 344.8                     .ifPresent(imageIdAdapter -> result.ifPresent(
+#14 344.8                                ^
+#14 344.8 /src/fineract-document/src/main/java/org/apache/fineract/infrastructure/documentmanagement/service/ImageWritePlatformServiceImpl.java:124: warning: [deprecation] EntityImageIdAdapter in org.apache.fineract.infrastructure.documentmanagement.adapter has been deprecated
+#14 344.8         return imageIdAdapters.stream().filter(imageIdAdapter -> imageIdAdapter.accept(entityType)).findFirst()
+#14 344.8                                                ^
+#14 344.8 /src/fineract-document/src/main/java/org/apache/fineract/infrastructure/documentmanagement/service/ImageWritePlatformServiceImpl.java:125: warning: [deprecation] EntityImageIdAdapter in org.apache.fineract.infrastructure.documentmanagement.adapter has been deprecated
+#14 344.8                 .flatMap(imageIdAdapter -> imageIdAdapter.set(entityId, null))
+#14 344.8                          ^
+#14 344.8 /src/fineract-document/src/main/java/org/apache/fineract/infrastructure/documentmanagement/service/ImageWritePlatformServiceImpl.java:126: warning: [deprecation] EntityImageIdAdapter in org.apache.fineract.infrastructure.documentmanagement.adapter has been deprecated
+#14 344.8                 .flatMap(imageIdResult -> imageRepository.findById(imageIdResult.getId())).map(image -> {
+#14 344.8                          ^
+#14 344.8 /src/fineract-document/src/main/java/org/apache/fineract/infrastructure/documentmanagement/service/ImageWritePlatformServiceImpl.java:46: warning: [deprecation] EntityImageIdAdapter in org.apache.fineract.infrastructure.documentmanagement.adapter has been deprecated
+#14 344.8 @RequiredArgsConstructor
+#14 344.8 ^
+#14 344.8 /src/fineract-document/src/main/java/org/apache/fineract/infrastructure/documentmanagement/service/ImageWritePlatformServiceImpl.java:46: warning: [deprecation] EntityImageIdAdapter in org.apache.fineract.infrastructure.documentmanagement.adapter has been deprecated
+#14 344.8 @RequiredArgsConstructor
+#14 344.8 ^
+#14 344.8 /src/fineract-document/src/main/java/org/apache/fineract/infrastructure/documentmanagement/service/ImageWritePlatformServiceImpl.java:46: warning: [deprecation] EntityImageIdAdapter in org.apache.fineract.infrastructure.documentmanagement.adapter has been deprecated
+#14 344.8 @RequiredArgsConstructor
+#14 344.8 ^
+#14 344.8 /src/fineract-document/src/main/java/org/apache/fineract/infrastructure/documentmanagement/service/ImageWritePlatformServiceImpl.java:46: warning: [deprecation] EntityImageIdAdapter in org.apache.fineract.infrastructure.documentmanagement.adapter has been deprecated
+#14 344.8 @RequiredArgsConstructor
+#14 344.8 ^
+#14 344.8 /src/fineract-document/src/main/java/org/apache/fineract/infrastructure/documentmanagement/service/ImageWritePlatformServiceImpl.java:46: warning: [deprecation] EntityImageIdAdapter in org.apache.fineract.infrastructure.documentmanagement.adapter has been deprecated
+#14 344.8 @RequiredArgsConstructor
+#14 344.8 ^
+#14 344.8 /src/fineract-document/src/main/java/org/apache/fineract/infrastructure/documentmanagement/service/ImageWritePlatformServiceImpl.java:46: warning: [deprecation] EntityImageIdAdapter in org.apache.fineract.infrastructure.documentmanagement.adapter has been deprecated
+#14 344.8 @RequiredArgsConstructor
+#14 344.8 ^
+#14 344.8 /src/fineract-document/src/main/java/org/apache/fineract/infrastructure/documentmanagement/service/ImageWritePlatformServiceImpl.java:46: warning: [deprecation] EntityImageIdAdapter in org.apache.fineract.infrastructure.documentmanagement.adapter has been deprecated
+#14 344.8 @RequiredArgsConstructor
+#14 344.8 ^
+#14 344.9 25 warnings
+#14 347.7 
+#14 347.7 > Task :fineract-document:classes
+#14 347.8 > Task :fineract-document:jar
+#14 347.9 > Task :fineract-loan:compileJava
+#14 347.9 > Task :fineract-loan:classes
+#14 348.0 > Task :fineract-loan:jar
+#14 348.1 > Task :fineract-report:compileJava
+#14 351.0 > Task :fineract-investor:compileJava
+#14 351.0 > Task :fineract-investor:classes
+#14 351.1 > Task :fineract-investor:jar
+#14 353.9 > Task :fineract-progressive-loan:compileJava
+#14 353.9 > Task :fineract-progressive-loan:classes
+#14 353.9 > Task :fineract-progressive-loan:jar
+#14 353.9 > Task :fineract-report:classes
+#14 353.9 > Task :fineract-report:jar
+#14 354.3 > Task :fineract-working-capital-loan:compileJava
+#14 354.3 > Task :fineract-working-capital-loan:classes
+#14 354.5 > Task :fineract-working-capital-loan:jar
+#14 356.2 > Task :fineract-loan-origination:compileJava
+#14 356.2 > Task :fineract-loan-origination:classes
+#14 356.2 > Task :fineract-loan-origination:jar
+#14 356.2 > Task :fineract-savings:compileJava
+#14 356.2 > Task :fineract-savings:classes
+#14 356.2 > Task :fineract-savings:jar
+#14 360.9 > Task :fineract-security:compileJava
+#14 360.9 > Task :fineract-security:classes
+#14 360.9 > Task :fineract-security:jar
+#14 384.4 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobDetail.java:63: warning: [deprecation] Temporal in jakarta.persistence has been deprecated
+#14 384.4     @Temporal(TemporalType.TIMESTAMP)
+#14 384.4      ^
+#14 384.4 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobDetail.java:63: warning: [deprecation] TemporalType in jakarta.persistence has been deprecated
+#14 384.4     @Temporal(TemporalType.TIMESTAMP)
+#14 384.4               ^
+#14 384.4 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobDetail.java:63: warning: [deprecation] Temporal in jakarta.persistence has been deprecated
+#14 384.4 > Task :fineract-provider:compileJava
+#14 384.4 
+#14 384.4     @Temporal(TemporalType.TIMESTAMP)
+#14 384.4      ^
+#14 384.4 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobDetail.java:63: warning: [deprecation] TemporalType in jakarta.persistence has been deprecated
+#14 384.4     @Temporal(TemporalType.TIMESTAMP)
+#14 384.4               ^
+#14 384.4 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobDetail.java:63: warning: [deprecation] Temporal in jakarta.persistence has been deprecated
+#14 384.4     @Temporal(TemporalType.TIMESTAMP)
+#14 384.4      ^
+#14 384.4 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobDetail.java:63: warning: [deprecation] TemporalType in jakarta.persistence has been deprecated
+#14 384.4     @Temporal(TemporalType.TIMESTAMP)
+#14 384.4               ^
+#14 384.4 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobDetail.java:63: warning: [deprecation] Temporal in jakarta.persistence has been deprecated
+#14 384.4     @Temporal(TemporalType.TIMESTAMP)
+#14 384.4      ^
+#14 384.4 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobDetail.java:63: warning: [deprecation] TemporalType in jakarta.persistence has been deprecated
+#14 384.4     @Temporal(TemporalType.TIMESTAMP)
+#14 384.4               ^
+#14 384.4 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobDetail.java:63: warning: [deprecation] Temporal in jakarta.persistence has been deprecated
+#14 384.4     @Temporal(TemporalType.TIMESTAMP)
+#14 384.4      ^
+#14 384.4 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobDetail.java:63: warning: [deprecation] TemporalType in jakarta.persistence has been deprecated
+#14 384.4     @Temporal(TemporalType.TIMESTAMP)
+#14 384.4               ^
+#14 384.4 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobDetail.java:63: warning: [deprecation] Temporal in jakarta.persistence has been deprecated
+#14 384.4     @Temporal(TemporalType.TIMESTAMP)
+#14 384.4      ^
+#14 384.4 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobDetail.java:63: warning: [deprecation] TemporalType in jakarta.persistence has been deprecated
+#14 384.4     @Temporal(TemporalType.TIMESTAMP)
+#14 384.4               ^
+#14 384.4 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobDetail.java:63: warning: [deprecation] Temporal in jakarta.persistence has been deprecated
+#14 384.4     @Temporal(TemporalType.TIMESTAMP)
+#14 384.4      ^
+#14 384.4 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobDetail.java:63: warning: [deprecation] TemporalType in jakarta.persistence has been deprecated
+#14 384.4     @Temporal(TemporalType.TIMESTAMP)
+#14 384.4               ^
+#14 384.4 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobDetail.java:73: warning: [deprecation] Temporal in jakarta.persistence has been deprecated
+#14 384.4     @Temporal(TemporalType.TIMESTAMP)
+#14 384.4      ^
+#14 384.4 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobDetail.java:73: warning: [deprecation] TemporalType in jakarta.persistence has been deprecated
+#14 384.4     @Temporal(TemporalType.TIMESTAMP)
+#14 384.4               ^
+#14 384.4 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobDetail.java:73: warning: [deprecation] Temporal in jakarta.persistence has been deprecated
+#14 384.4     @Temporal(TemporalType.TIMESTAMP)
+#14 384.4      ^
+#14 384.4 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobDetail.java:73: warning: [deprecation] TemporalType in jakarta.persistence has been deprecated
+#14 384.4     @Temporal(TemporalType.TIMESTAMP)
+#14 384.4               ^
+#14 384.4 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobDetail.java:73: warning: [deprecation] Temporal in jakarta.persistence has been deprecated
+#14 384.4     @Temporal(TemporalType.TIMESTAMP)
+#14 384.4      ^
+#14 384.4 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobDetail.java:73: warning: [deprecation] TemporalType in jakarta.persistence has been deprecated
+#14 384.4     @Temporal(TemporalType.TIMESTAMP)
+#14 384.4               ^
+#14 384.4 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobDetail.java:73: warning: [deprecation] Temporal in jakarta.persistence has been deprecated
+#14 384.4     @Temporal(TemporalType.TIMESTAMP)
+#14 384.4      ^
+#14 384.4 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobDetail.java:73: warning: [deprecation] TemporalType in jakarta.persistence has been deprecated
+#14 384.4     @Temporal(TemporalType.TIMESTAMP)
+#14 384.4               ^
+#14 384.4 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobDetail.java:73: warning: [deprecation] Temporal in jakarta.persistence has been deprecated
+#14 384.4     @Temporal(TemporalType.TIMESTAMP)
+#14 384.4      ^
+#14 384.4 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobDetail.java:73: warning: [deprecation] TemporalType in jakarta.persistence has been deprecated
+#14 384.4     @Temporal(TemporalType.TIMESTAMP)
+#14 384.4               ^
+#14 384.4 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobDetail.java:73: warning: [deprecation] Temporal in jakarta.persistence has been deprecated
+#14 384.4     @Temporal(TemporalType.TIMESTAMP)
+#14 384.4      ^
+#14 384.4 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobDetail.java:73: warning: [deprecation] TemporalType in jakarta.persistence has been deprecated
+#14 384.4     @Temporal(TemporalType.TIMESTAMP)
+#14 384.4               ^
+#14 384.4 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobDetail.java:73: warning: [deprecation] Temporal in jakarta.persistence has been deprecated
+#14 384.4     @Temporal(TemporalType.TIMESTAMP)
+#14 384.4      ^
+#14 384.4 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobDetail.java:73: warning: [deprecation] TemporalType in jakarta.persistence has been deprecated
+#14 384.4     @Temporal(TemporalType.TIMESTAMP)
+#14 384.4               ^
+#14 384.4 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobDetail.java:77: warning: [deprecation] Temporal in jakarta.persistence has been deprecated
+#14 384.4     @Temporal(TemporalType.TIMESTAMP)
+#14 384.4      ^
+#14 384.4 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobDetail.java:77: warning: [deprecation] TemporalType in jakarta.persistence has been deprecated
+#14 384.4     @Temporal(TemporalType.TIMESTAMP)
+#14 384.4               ^
+#14 384.4 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobDetail.java:77: warning: [deprecation] Temporal in jakarta.persistence has been deprecated
+#14 384.4     @Temporal(TemporalType.TIMESTAMP)
+#14 384.4      ^
+#14 384.4 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobDetail.java:77: warning: [deprecation] TemporalType in jakarta.persistence has been deprecated
+#14 384.4     @Temporal(TemporalType.TIMESTAMP)
+#14 384.4               ^
+#14 384.4 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobDetail.java:77: warning: [deprecation] Temporal in jakarta.persistence has been deprecated
+#14 384.4     @Temporal(TemporalType.TIMESTAMP)
+#14 384.4      ^
+#14 384.4 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobDetail.java:77: warning: [deprecation] TemporalType in jakarta.persistence has been deprecated
+#14 384.4     @Temporal(TemporalType.TIMESTAMP)
+#14 384.4               ^
+#14 384.4 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobDetail.java:77: warning: [deprecation] Temporal in jakarta.persistence has been deprecated
+#14 384.4     @Temporal(TemporalType.TIMESTAMP)
+#14 384.4      ^
+#14 384.4 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobDetail.java:77: warning: [deprecation] TemporalType in jakarta.persistence has been deprecated
+#14 384.4     @Temporal(TemporalType.TIMESTAMP)
+#14 384.4               ^
+#14 384.4 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobDetail.java:77: warning: [deprecation] Temporal in jakarta.persistence has been deprecated
+#14 384.4     @Temporal(TemporalType.TIMESTAMP)
+#14 384.4      ^
+#14 384.4 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobDetail.java:77: warning: [deprecation] TemporalType in jakarta.persistence has been deprecated
+#14 384.4     @Temporal(TemporalType.TIMESTAMP)
+#14 384.4               ^
+#14 384.4 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobDetail.java:77: warning: [deprecation] Temporal in jakarta.persistence has been deprecated
+#14 384.4     @Temporal(TemporalType.TIMESTAMP)
+#14 384.4      ^
+#14 384.4 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobDetail.java:77: warning: [deprecation] TemporalType in jakarta.persistence has been deprecated
+#14 384.4     @Temporal(TemporalType.TIMESTAMP)
+#14 384.4               ^
+#14 384.4 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobDetail.java:77: warning: [deprecation] Temporal in jakarta.persistence has been deprecated
+#14 384.4     @Temporal(TemporalType.TIMESTAMP)
+#14 384.4      ^
+#14 384.4 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobDetail.java:77: warning: [deprecation] TemporalType in jakarta.persistence has been deprecated
+#14 384.4     @Temporal(TemporalType.TIMESTAMP)
+#14 384.4               ^
+#14 384.9 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/core/config/JdbcConfig.java:36: warning: [deprecation] jdbcOperationsRef() in EnableJdbcRepositories has been deprecated
+#14 384.9         "org.apache.fineract.infrastructure.documentmanagement.domain" }, jdbcOperationsRef = "namedParameterJdbcTemplate", transactionManagerRef = "jdbcTransactionManager")
+#14 384.9                                                                           ^
+#14 384.9 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/core/config/JdbcConfig.java:36: warning: [deprecation] jdbcOperationsRef() in EnableJdbcRepositories has been deprecated
+#14 384.9         "org.apache.fineract.infrastructure.documentmanagement.domain" }, jdbcOperationsRef = "namedParameterJdbcTemplate", transactionManagerRef = "jdbcTransactionManager")
+#14 384.9                                                                           ^
+#14 384.9 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/core/config/JdbcConfig.java:36: warning: [deprecation] jdbcOperationsRef() in EnableJdbcRepositories has been deprecated
+#14 384.9         "org.apache.fineract.infrastructure.documentmanagement.domain" }, jdbcOperationsRef = "namedParameterJdbcTemplate", transactionManagerRef = "jdbcTransactionManager")
+#14 384.9                                                                           ^
+#14 384.9 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/core/config/JdbcConfig.java:36: warning: [deprecation] jdbcOperationsRef() in EnableJdbcRepositories has been deprecated
+#14 384.9         "org.apache.fineract.infrastructure.documentmanagement.domain" }, jdbcOperationsRef = "namedParameterJdbcTemplate", transactionManagerRef = "jdbcTransactionManager")
+#14 384.9                                                                           ^
+#14 384.9 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/core/config/JdbcConfig.java:36: warning: [deprecation] jdbcOperationsRef() in EnableJdbcRepositories has been deprecated
+#14 384.9         "org.apache.fineract.infrastructure.documentmanagement.domain" }, jdbcOperationsRef = "namedParameterJdbcTemplate", transactionManagerRef = "jdbcTransactionManager")
+#14 384.9                                                                           ^
+#14 384.9 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/core/config/JdbcConfig.java:36: warning: [deprecation] jdbcOperationsRef() in EnableJdbcRepositories has been deprecated
+#14 384.9         "org.apache.fineract.infrastructure.documentmanagement.domain" }, jdbcOperationsRef = "namedParameterJdbcTemplate", transactionManagerRef = "jdbcTransactionManager")
+#14 384.9                                                                           ^
+#14 384.9 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/core/config/JdbcConfig.java:36: warning: [deprecation] jdbcOperationsRef() in EnableJdbcRepositories has been deprecated
+#14 384.9         "org.apache.fineract.infrastructure.documentmanagement.domain" }, jdbcOperationsRef = "namedParameterJdbcTemplate", transactionManagerRef = "jdbcTransactionManager")
+#14 384.9                                                                           ^
+#14 384.9 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/core/config/JdbcConfig.java:43: warning: [removal] INSTANCE in JdbcMySqlDialect has been deprecated and marked for removal
+#14 384.9         return databaseTypeResolver.isPostgreSQL() ? JdbcPostgresDialect.INSTANCE : JdbcMySqlDialect.INSTANCE;
+#14 384.9                                                                                                     ^
+#14 384.9 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/core/service/migration/TenantDatabaseUpgradeService.java:91: warning: [deprecation] ThreadLocalScopeManager in liquibase has been deprecated
+#14 384.9             Scope.setScopeManager(new ThreadLocalScopeManager());
+#14 384.9                                       ^
+#14 385.0 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/core/jersey/JerseyJacksonConverterConfig.java:48: warning: [removal] Jackson2ObjectMapperBuilder in org.springframework.http.converter.json has been deprecated and marked for removal
+#14 385.0         ObjectMapper objectMapper = new Jackson2ObjectMapperBuilder() //
+#14 385.0                                         ^
+#14 385.0 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/core/jersey/JerseyConfig.java:46: warning: [unchecked] unchecked call to in(Class<? extends Annotation>) as a member of the raw type Binding
+#14 385.0                 bind(PageableParamProvider.class).to(ValueParamProvider.class).in(Singleton.class);
+#14 385.0                                                                                  ^
+#14 385.0   where D is a type-variable:
+#14 385.0     D extends Binding declared in class Binding
+#14 385.4 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/hooks/service/HookReadPlatformServiceImpl.java:104: warning: [removal] HookEventResultSetExtractor in org.apache.fineract.infrastructure.hooks.domain has been deprecated and marked for removal
+#14 385.4         final HookEventResultSetExtractor extractor = new HookEventResultSetExtractor();
+#14 385.4               ^
+#14 385.4 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/hooks/service/HookReadPlatformServiceImpl.java:104: warning: [removal] HookEventResultSetExtractor in org.apache.fineract.infrastructure.hooks.domain has been deprecated and marked for removal
+#14 385.4         final HookEventResultSetExtractor extractor = new HookEventResultSetExtractor();
+#14 385.4                                                           ^
+#14 386.0 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobRunHistory.java:51: warning: [deprecation] Temporal in jakarta.persistence has been deprecated
+#14 386.0     @Temporal(TemporalType.TIMESTAMP)
+#14 386.0      ^
+#14 386.0 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobRunHistory.java:51: warning: [deprecation] TemporalType in jakarta.persistence has been deprecated
+#14 386.0     @Temporal(TemporalType.TIMESTAMP)
+#14 386.0               ^
+#14 386.0 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobRunHistory.java:51: warning: [deprecation] Temporal in jakarta.persistence has been deprecated
+#14 386.0     @Temporal(TemporalType.TIMESTAMP)
+#14 386.0      ^
+#14 386.0 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobRunHistory.java:51: warning: [deprecation] TemporalType in jakarta.persistence has been deprecated
+#14 386.0     @Temporal(TemporalType.TIMESTAMP)
+#14 386.0               ^
+#14 386.0 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobRunHistory.java:51: warning: [deprecation] Temporal in jakarta.persistence has been deprecated
+#14 386.0     @Temporal(TemporalType.TIMESTAMP)
+#14 386.0      ^
+#14 386.0 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobRunHistory.java:51: warning: [deprecation] TemporalType in jakarta.persistence has been deprecated
+#14 386.0     @Temporal(TemporalType.TIMESTAMP)
+#14 386.0               ^
+#14 386.0 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobRunHistory.java:51: warning: [deprecation] Temporal in jakarta.persistence has been deprecated
+#14 386.0     @Temporal(TemporalType.TIMESTAMP)
+#14 386.0      ^
+#14 386.0 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobRunHistory.java:51: warning: [deprecation] TemporalType in jakarta.persistence has been deprecated
+#14 386.0     @Temporal(TemporalType.TIMESTAMP)
+#14 386.0               ^
+#14 386.0 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobRunHistory.java:51: warning: [deprecation] Temporal in jakarta.persistence has been deprecated
+#14 386.0     @Temporal(TemporalType.TIMESTAMP)
+#14 386.0      ^
+#14 386.0 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobRunHistory.java:51: warning: [deprecation] TemporalType in jakarta.persistence has been deprecated
+#14 386.0     @Temporal(TemporalType.TIMESTAMP)
+#14 386.0               ^
+#14 386.0 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobRunHistory.java:51: warning: [deprecation] Temporal in jakarta.persistence has been deprecated
+#14 386.0     @Temporal(TemporalType.TIMESTAMP)
+#14 386.0      ^
+#14 386.0 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobRunHistory.java:51: warning: [deprecation] TemporalType in jakarta.persistence has been deprecated
+#14 386.0     @Temporal(TemporalType.TIMESTAMP)
+#14 386.0               ^
+#14 386.0 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobRunHistory.java:51: warning: [deprecation] Temporal in jakarta.persistence has been deprecated
+#14 386.0     @Temporal(TemporalType.TIMESTAMP)
+#14 386.0      ^
+#14 386.0 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobRunHistory.java:51: warning: [deprecation] TemporalType in jakarta.persistence has been deprecated
+#14 386.0     @Temporal(TemporalType.TIMESTAMP)
+#14 386.0               ^
+#14 386.0 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobRunHistory.java:55: warning: [deprecation] Temporal in jakarta.persistence has been deprecated
+#14 386.0     @Temporal(TemporalType.TIMESTAMP)
+#14 386.0      ^
+#14 386.0 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobRunHistory.java:55: warning: [deprecation] TemporalType in jakarta.persistence has been deprecated
+#14 386.0     @Temporal(TemporalType.TIMESTAMP)
+#14 386.0               ^
+#14 386.0 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobRunHistory.java:55: warning: [deprecation] Temporal in jakarta.persistence has been deprecated
+#14 386.0     @Temporal(TemporalType.TIMESTAMP)
+#14 386.0      ^
+#14 386.0 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobRunHistory.java:55: warning: [deprecation] TemporalType in jakarta.persistence has been deprecated
+#14 386.0     @Temporal(TemporalType.TIMESTAMP)
+#14 386.0               ^
+#14 386.0 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobRunHistory.java:55: warning: [deprecation] Temporal in jakarta.persistence has been deprecated
+#14 386.0     @Temporal(TemporalType.TIMESTAMP)
+#14 386.0      ^
+#14 386.0 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobRunHistory.java:55: warning: [deprecation] TemporalType in jakarta.persistence has been deprecated
+#14 386.0     @Temporal(TemporalType.TIMESTAMP)
+#14 386.0               ^
+#14 386.0 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobRunHistory.java:55: warning: [deprecation] Temporal in jakarta.persistence has been deprecated
+#14 386.0     @Temporal(TemporalType.TIMESTAMP)
+#14 386.0      ^
+#14 386.0 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobRunHistory.java:55: warning: [deprecation] TemporalType in jakarta.persistence has been deprecated
+#14 386.0     @Temporal(TemporalType.TIMESTAMP)
+#14 386.0               ^
+#14 386.0 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobRunHistory.java:55: warning: [deprecation] Temporal in jakarta.persistence has been deprecated
+#14 386.0     @Temporal(TemporalType.TIMESTAMP)
+#14 386.0      ^
+#14 386.0 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobRunHistory.java:55: warning: [deprecation] TemporalType in jakarta.persistence has been deprecated
+#14 386.0     @Temporal(TemporalType.TIMESTAMP)
+#14 386.0               ^
+#14 386.0 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobRunHistory.java:55: warning: [deprecation] Temporal in jakarta.persistence has been deprecated
+#14 386.0     @Temporal(TemporalType.TIMESTAMP)
+#14 386.0      ^
+#14 386.0 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobRunHistory.java:55: warning: [deprecation] TemporalType in jakarta.persistence has been deprecated
+#14 386.0     @Temporal(TemporalType.TIMESTAMP)
+#14 386.0               ^
+#14 386.0 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobRunHistory.java:55: warning: [deprecation] Temporal in jakarta.persistence has been deprecated
+#14 386.0     @Temporal(TemporalType.TIMESTAMP)
+#14 386.0      ^
+#14 386.0 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/domain/ScheduledJobRunHistory.java:55: warning: [deprecation] TemporalType in jakarta.persistence has been deprecated
+#14 386.0     @Temporal(TemporalType.TIMESTAMP)
+#14 386.0               ^
+#14 386.1 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/service/StuckJobExecutorServiceImpl.java:76: warning: [removal] NoSuchJobExecutionException in org.springframework.batch.core.launch has been deprecated and marked for removal
+#14 386.1     private JobExecution getJobExecutionOrFail(Long stuckJobId) throws NoSuchJobExecutionException {
+#14 386.1                                                                        ^
+#14 386.1 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/service/StuckJobExecutorServiceImpl.java:76: warning: [removal] NoSuchJobExecutionException in org.springframework.batch.core.launch has been deprecated and marked for removal
+#14 386.1     private JobExecution getJobExecutionOrFail(Long stuckJobId) throws NoSuchJobExecutionException {
+#14 386.1                                                                        ^
+#14 386.1 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/service/StuckJobExecutorServiceImpl.java:76: warning: [removal] NoSuchJobExecutionException in org.springframework.batch.core.launch has been deprecated and marked for removal
+#14 386.1     private JobExecution getJobExecutionOrFail(Long stuckJobId) throws NoSuchJobExecutionException {
+#14 386.1                                                                        ^
+#14 386.1 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/service/StuckJobExecutorServiceImpl.java:76: warning: [removal] NoSuchJobExecutionException in org.springframework.batch.core.launch has been deprecated and marked for removal
+#14 386.1     private JobExecution getJobExecutionOrFail(Long stuckJobId) throws NoSuchJobExecutionException {
+#14 386.1                                                                        ^
+#14 386.1 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/service/StuckJobExecutorServiceImpl.java:76: warning: [removal] NoSuchJobExecutionException in org.springframework.batch.core.launch has been deprecated and marked for removal
+#14 386.1     private JobExecution getJobExecutionOrFail(Long stuckJobId) throws NoSuchJobExecutionException {
+#14 386.1                                                                        ^
+#14 386.1 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/service/StuckJobExecutorServiceImpl.java:76: warning: [removal] NoSuchJobExecutionException in org.springframework.batch.core.launch has been deprecated and marked for removal
+#14 386.1     private JobExecution getJobExecutionOrFail(Long stuckJobId) throws NoSuchJobExecutionException {
+#14 386.1                                                                        ^
+#14 386.1 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/service/StuckJobExecutorServiceImpl.java:76: warning: [removal] NoSuchJobExecutionException in org.springframework.batch.core.launch has been deprecated and marked for removal
+#14 386.1     private JobExecution getJobExecutionOrFail(Long stuckJobId) throws NoSuchJobExecutionException {
+#14 386.1                                                                        ^
+#14 386.1 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/service/StuckJobExecutorServiceImpl.java:78: warning: [removal] NoSuchJobExecutionException in org.springframework.batch.core.launch has been deprecated and marked for removal
+#14 386.1             throw new NoSuchJobExecutionException("Job execution id must not be null");
+#14 386.1                       ^
+#14 386.1 /src/fineract-provider/src/main/java/org/apache/fineract/infrastructure/jobs/service/StuckJobExecutorServiceImpl.java:82: warning: [removal] NoSuchJobExecutionException in org.springframework.batch.core.launch has been deprecated and marked for removal
+#14 386.1             throw new NoSuchJobExecutionException("No job execution found for id " + stuckJobId);
+#14 386.1                       ^
+#14 386.3 92 warnings
+#14 394.7 
+#14 394.7 > Task :fineract-provider:classes
+#14 424.2 > Task :fineract-provider:resolve
+#14 424.2 > Task :fineract-provider:resolveMainClassName
+#14 426.3 > Task :fineract-provider:bootJar
+#14 426.3 
+#14 426.3 [Incubating] Problems report is available at: file:///src/build/reports/problems/problems-report.html
+#14 426.3 
+#14 426.3 Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+#14 426.3 
+#14 426.3 You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+#14 426.3 
+#14 426.3 For more on this, please refer to https://docs.gradle.org/9.7.1/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+#14 426.3 
+#14 426.4 BUILD SUCCESSFUL in 7m 6s
+#14 426.4 92 actionable tasks: 92 executed
+#14 427.1 Built fineract-provider/build/libs/fineract-provider-1.16.1.jar
+#14 DONE 427.8s
+
+#15 [stage-1 4/4] COPY --from=builder /fineract-provider.jar /app/fineract-provider.jar
+#15 DONE 0.5s
+
+#16 exporting to image
+#16 exporting layers
+#16 exporting layers 0.4s done
+#16 writing image sha256:53fc6eb28f8875b2b058617780960c348b43c03383d2441eff7e53ace58f4b51 done
+#16 naming to docker.io/library/fineract-custom:local
+#16 naming to docker.io/library/fineract-custom:local done
+#16 DONE 0.4s

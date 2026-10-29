@@ -1,0 +1,7 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+.idea/
+.DS_Store
+evidence/build-fineract.log

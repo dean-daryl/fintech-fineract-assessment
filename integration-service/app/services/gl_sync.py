@@ -1,5 +1,4 @@
 import logging
-import random
 import time
 from dataclasses import asdict
 from datetime import UTC, datetime, timedelta
@@ -24,22 +23,16 @@ from app.domain.gl_mapping import (
     payload_hash,
     to_fineract_gl_account,
 )
+from app.domain.retry import retry_delay
 from app.models import GLAccountSync, GLSyncStatus
 
 log = logging.getLogger(__name__)
 
-RETRY_BASE_SECONDS = 5
-RETRY_CAP_SECONDS = 300
 RECOVERY_BATCH_SIZE = 100
 
 
 def _now() -> datetime:
     return datetime.now(UTC)
-
-
-def retry_delay(attempts: int) -> timedelta:
-    seconds = min(RETRY_CAP_SECONDS, RETRY_BASE_SECONDS * 2 ** max(attempts - 1, 0))
-    return timedelta(seconds=seconds + random.uniform(0, 1))
 
 
 class GLSyncService:

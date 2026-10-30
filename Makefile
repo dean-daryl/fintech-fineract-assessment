@@ -9,7 +9,7 @@ FINERACT_TAG := $(shell sed -n 's/^ARG FINERACT_TAG=//p' fineract-customization/
 PATCH_DIR := $(CURDIR)/fineract-customization/patch
 JAVA_HOME_25 ?= $(shell /usr/libexec/java_home -v 25 2>/dev/null)
 
-.PHONY: build-fineract patches up down reset logs ps bootstrap verify-fineract-setup evidence-bootstrap simulate-gl-sync demo-fineract-gl evidence-compose-up test-java
+.PHONY: build-fineract patches up down reset logs ps bootstrap verify-fineract-setup evidence-bootstrap simulate-gl-sync demo-fineract-gl evidence-compose-up test-java test-python lint
 
 # Builds what changed and waits until every service reports healthy.
 # Fineract is built through build-fineract (same builder and cache as before), not
@@ -86,3 +86,9 @@ test-java:
 	set -o pipefail; cd $(FINERACT_SRC) && JAVA_HOME=$(JAVA_HOME_25) ./gradlew --console=plain \
 		:fineract-accounting:test --tests '*GLAccountExternalReferenceMatcherTest' --tests '*GLAccountSyncTest' \
 		:integration-tests:test --tests '*GLAccountExternalReferenceIntegrationTest' 2>&1 | tee $(CURDIR)/evidence/test-java.log
+
+test-python:
+	cd integration-service && uv run pytest -q
+
+lint:
+	cd integration-service && uv run ruff check && uv run ruff format --check && uv run mypy

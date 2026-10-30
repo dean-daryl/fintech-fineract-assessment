@@ -194,3 +194,55 @@ Bootstrap compares the role's permission set exactly. A role with one permission
 - The stock admin `mifos`/`password` is unchanged. Bootstrap needs it on a fresh Fineract. A real deployment would rotate it after bootstrap.
 - The user has a placeholder e-mail (`integration-api@integration.invalid`), because Fineract requires one when `sendPasswordToEmail` is false.
 - Bootstrap cannot check that an existing user's password matches `.env` (Fineract never returns it). It logs in as the user after the user step, so a wrong password fails there.
+
+## D-014: Operations table and state machine
+
+Every partner request that changes state goes through one table, `operations`, and one state machine. GL sync keeps its own table (D-008).
+
+**The table is the idempotency store and the retry queue.** One row per request, unique on `(operation_type, external_reference)` in the database (`uq_operations_type_reference`). It holds the request payload and its SHA-256 hash (canonical JSON, sorted keys), status, attempts, `next_attempt_at`, `locked_until`, `last_error`, the Fineract and ERP ids of what the operation created, and the stored response (HTTP code and body).
+
+**Claiming.** A request runs `INSERT ... ON CONFLICT DO NOTHING RETURNING`. Exactly one concurrent request gets the row back and executes. Every other one reads the existing row and replays:
+
+| Existing row | Same payload hash | Different payload hash |
+|---|---|---|
+| Finished (`COMPLETED`, `FAILED`, `NEEDS_RECONCILIATION`) | Stored response (200 instead of 201 for a success) | 409 |
+| Not finished | 202 with the current status | 409 |
+
+A failed operation replays its failure. Retrying a failed request needs a new `external_reference`.
+
+**State machine.** The allowed transitions are one table in `domain/states.py`. `check_transition` raises on anything else, and the store calls it inside the same row lock (`SELECT ... FOR UPDATE`) that writes the new status.
+
+```
+RECEIVED -> FINERACT_PENDING -> FINERACT_DONE -> ERP_PENDING -> COMPLETED
+RECEIVED, FINERACT_PENDING -> FAILED
+FINERACT_PENDING, ERP_PENDING -> NEEDS_RECONCILIATION
+FINERACT_DONE -> COMPLETED   only for operation types with no ERP step
+```
+
+- An operation type with no ERP step (client creation) goes `FINERACT_DONE -> COMPLETED`; one with an ERP step must go through `ERP_PENDING`. This is checked per type, so a loan repayment can never skip its journal entry.
+- `FAILED` means nothing happened downstream. `FINERACT_PENDING -> NEEDS_RECONCILIATION` is for when Fineract's outcome stays unknown after every attempt (a timeout, then lookups that also fail).
+- The three finished statuses have no transitions out. Resolving `NEEDS_RECONCILIATION` belongs to the reconciliation work, not built yet.
+
+**Lease.** The request that creates the row also takes a lease (`locked_until`, `operation_lease_seconds`). While the lease holds, the recovery sweep skips the row, so the request in flight and the sweep never execute the same operation. A deferred retry releases the lease and sets `next_attempt_at` with the same backoff as GL sync (`domain/retry.py`: 5s doubling to 5 min, plus jitter). The sweep claims due rows with `FOR UPDATE SKIP LOCKED` and takes a fresh lease.
+
+**Known weaknesses.**
+- A crash between Fineract succeeding and the store writing `FINERACT_DONE` leaves the row in `FINERACT_PENDING`. Recovery resolves it by looking the resource up by its external id before resending (rule 4), so correctness depends on every operation having such a lookup.
+- A request that outlives its lease (a Fineract call longer than the lease) can overlap with the sweep. Fineract's own uniqueness on external ids is the guard behind it. The lease is far longer than the Fineract timeout.
+- The payload is stored in full. Fine for client and loan data in an assessment; a real service would review retention of personal data in this table.
+
+## D-015: Business identities and the client mapping table
+
+Partners identify clients and loans only by business ids. Fineract's numeric ids never appear in a request or a response.
+
+| Id | Format | Issued by | Stored in Fineract as |
+|---|---|---|---|
+| `client_uid` | `SME-` + 6 digits | **The partner**: it is their business id for the SME | client `externalId` |
+| `loan_reference` | `LN-<year>-` + 6 digits | The integration service (Part D) | loan `externalId` |
+
+**`client_uid` comes from the partner.** The brief says only that `loan_reference` is issued by our service, and an SME already has an id in the partner's system. We check its format and its uniqueness, and never generate one.
+
+**`client_map`** has one row per `client_uid` (primary key): the id of the operation that owns it, and Fineract's client id (unique, empty until Fineract confirms). It stores no name and no status. Those are read live from Fineract (rule 7), so the two can never disagree. Fineract's id is used only inside the service, for calls such as the loan application in Part D.
+
+**The `client_uid` is reserved before Fineract is called.** The create operation inserts its `client_map` row first, so two requests with different `external_reference`s but the same `client_uid` cannot both reach Fineract. The second finds the row owned by another operation and fails with 409. A `client_uid` whose owning operation `FAILED` (nothing was created in Fineract) can be taken over by a new request, so a partner can fix a rejected request and send it again under a new `external_reference`.
+
+**Two guards, both in a database.** `client_map`'s primary key in ours, and Fineract's own `UNIQUE (external_id)` on `m_client` (checked on the running 1.16.1 database: `m_client_external_id_key`) behind it.

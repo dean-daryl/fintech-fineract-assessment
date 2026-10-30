@@ -37,8 +37,3 @@ def sync_gl_accounts(request: Request) -> list[GLAccountSyncOut]:
 @router.get("/gl-accounts", response_model=list[GLAccountSyncOut])
 def list_gl_accounts(request: Request) -> list[GLAccountSyncOut]:
     return [GLAccountSyncOut.model_validate(row) for row in _service(request).list_statuses()]
-
-
-@router.post("/admin/recover")
-def recover(request: Request) -> dict[str, int]:
-    return {"gl_accounts_processed": _service(request).recover()}

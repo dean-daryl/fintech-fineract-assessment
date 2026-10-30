@@ -6,23 +6,28 @@ from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI, Request, Response
 
+from app.api.admin import router as admin_router
+from app.api.clients import router as clients_router
 from app.api.gl_accounts import router as gl_accounts_router
 from app.clients.erp import ErpClient
 from app.clients.fineract import FineractClient
 from app.config import get_settings
 from app.db import Base, SessionLocal, engine
 from app.logs import configure_logging, correlation_id
+from app.services.clients import ClientService
 from app.services.gl_sync import GLSyncService
+from app.services.operations import OperationStore
+from app.services.recovery import run_recovery
 
 log = logging.getLogger(__name__)
 
 
-async def _recovery_loop(service: GLSyncService, interval_seconds: int) -> None:
+async def _recovery_loop(gl_sync: GLSyncService, clients: ClientService, interval_seconds: int) -> None:
     while True:
         try:
-            processed = await asyncio.to_thread(service.recover)
-            if processed:
-                log.info("Recovery sweep processed %d GL account(s)", processed)
+            processed = await asyncio.to_thread(run_recovery, gl_sync, clients)
+            if any(processed.values()):
+                log.info("Recovery sweep processed %s", processed)
         except Exception:
             log.exception("Recovery sweep failed")
         await asyncio.sleep(interval_seconds)
@@ -44,8 +49,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     )
     erp = ErpClient(settings.erp_base_url)
     app.state.gl_sync = GLSyncService(SessionLocal, erp, fineract, settings)
+    app.state.clients = ClientService(SessionLocal, OperationStore(SessionLocal, settings.operation_lease_seconds), fineract, settings)
 
-    recovery = asyncio.create_task(_recovery_loop(app.state.gl_sync, settings.recovery_interval_seconds))
+    recovery = asyncio.create_task(_recovery_loop(app.state.gl_sync, app.state.clients, settings.recovery_interval_seconds))
     yield
     recovery.cancel()
     with suppress(asyncio.CancelledError):
@@ -54,6 +60,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(title="Integration Service", lifespan=lifespan)
 app.include_router(gl_accounts_router)
+app.include_router(clients_router)
+app.include_router(admin_router)
 
 
 @app.middleware("http")

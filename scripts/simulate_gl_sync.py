@@ -1,6 +1,8 @@
-"""Sends the same ERP account 4 times and syncs it 4 times, in parallel, then counts the results in each system.
+"""Sends the same ERP account 4 times and the same sync request 4 times, in parallel, then counts the results in each system.
 
-Expected: one ERP account, one Fineract GL account, one sync row (SYNCED). Re-running changes nothing.
+Expected: one ERP account, one Fineract GL account, one sync row (SYNCED), and one sync operation: one 201, the
+other three 202 (still running) or 200 (finished), and a later replay returns 200 with the 201's body. Re-running
+changes nothing in the ERP or Fineract; each run uses a new sync reference.
 Uses only the standard library so it runs on the host without a virtualenv.
 """
 
@@ -9,6 +11,7 @@ import json
 import os
 import ssl
 import sys
+import time
 import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
@@ -24,6 +27,7 @@ SELF_SIGNED = ssl._create_unverified_context()
 
 ACCOUNT = {"code": "1200", "name": "Loan Receivable", "type": "ASSET", "currency": "RWF", "external_reference": "GL-1200"}
 TIMES = 4
+SYNC_REFERENCE = f"SIM-GL-SYNC-{int(time.time()) % 1_000_000:06d}"
 
 
 def call(method: str, url: str, body: dict[str, Any] | None = None, fineract: bool = False) -> tuple[int, Any]:
@@ -52,10 +56,16 @@ def main() -> int:
     for code, _ in parallel(TIMES, lambda: call("POST", f"{ERP_URL}/api/accounts", ACCOUNT)):
         print(f"  -> {code}")
 
-    print(f"\nPOST {INTEGRATION_URL}/api/gl-accounts/sync x{TIMES} (parallel)")
-    for code, body in parallel(TIMES, lambda: call("POST", f"{INTEGRATION_URL}/api/gl-accounts/sync")):
-        mine = [row for row in body or [] if row["external_reference"] == reference] if code == 200 else body
-        print(f"  -> {code} {json.dumps(mine)}")
+    sync = {"external_reference": SYNC_REFERENCE}
+    print(f"\nPOST {INTEGRATION_URL}/api/gl-accounts/sync x{TIMES} (parallel) {json.dumps(sync)}")
+    results = parallel(TIMES, lambda: call("POST", f"{INTEGRATION_URL}/api/gl-accounts/sync", sync))
+    for code, body in results:
+        mine = [row for row in body.get("accounts", []) if row["external_reference"] == reference]
+        print(f"  -> {code} operation_status={body.get('operation_status')} {json.dumps(mine)}")
+    codes = sorted(code for code, _ in results)
+    first = next((body for code, body in results if code == 201), None)
+    replay_code, replay = call("POST", f"{INTEGRATION_URL}/api/gl-accounts/sync", sync)
+    print(f"\nPOST {INTEGRATION_URL}/api/gl-accounts/sync again, same reference -> {replay_code} operation_status={replay.get('operation_status')}")
 
     _, erp_accounts = call("GET", f"{ERP_URL}/api/accounts")
     _, fineract_accounts = call("GET", f"{FINERACT_URL}/glaccounts", fineract=True)
@@ -73,9 +83,13 @@ def main() -> int:
         print(f"  {name:<24} {count}")
     print(f"  {'sync status':<24} {', '.join(statuses)}")
 
-    ok = all(count == 1 for count in counts.values()) and statuses == ["SYNCED"]
-    print(f"\nExpected 1 / 1 / 1 and SYNCED: {'PASS' if ok else 'FAIL'}")
-    return 0 if ok else 1
+    counts_ok = all(count == 1 for count in counts.values()) and statuses == ["SYNCED"]
+    print(f"\nExpected 1 / 1 / 1 and SYNCED: {'PASS' if counts_ok else 'FAIL'}")
+    sync_ok = codes.count(201) == 1 and all(code in (200, 202) for code in codes if code != 201)
+    print(f"Expected one 201, the others 202 or 200 (got {codes}): {'PASS' if sync_ok else 'FAIL'}")
+    replay_ok = replay_code == 200 and replay == first
+    print(f"Expected the replay to be 200 with the 201's body: {'PASS' if replay_ok else 'FAIL'}")
+    return 0 if counts_ok and sync_ok and replay_ok else 1
 
 
 if __name__ == "__main__":

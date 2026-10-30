@@ -14,13 +14,14 @@ class GLSyncStatus(StrEnum):
     SYNC_PENDING = "SYNC_PENDING"
     SYNCED = "SYNCED"
     FAILED = "FAILED"
+    CONFLICT = "CONFLICT"
 
 
 class GLAccountSync(Base):
     __tablename__ = "gl_account_sync"
 
     external_reference: Mapped[str] = mapped_column(String(100), primary_key=True)
-    erp_code: Mapped[str] = mapped_column(String(45))
+    erp_code: Mapped[str] = mapped_column(String(45), unique=True)
     erp_account: Mapped[dict[str, Any]] = mapped_column(JSONB)
     payload_hash: Mapped[str] = mapped_column(String(64))
     status: Mapped[str] = mapped_column(String(20), default=GLSyncStatus.SYNC_PENDING.value)

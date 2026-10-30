@@ -277,9 +277,10 @@ def ensure_gl_accounts() -> dict[str, int]:
             raise BootstrapError(f"ERP account {reference} -> {status}: {json.dumps(payload)}")
         report(f"ERP account {reference} {account['name']!r}", "created" if status == 201 else "exists, unchanged")
 
-    status, payload = call("POST", f"{INTEGRATION_URL}/api/gl-accounts/sync")
-    if status != 200:
-        raise BootstrapError(f"GL sync -> {status}: {json.dumps(payload)}")
+    sync_reference = f"BOOTSTRAP-GL-SYNC-{int(time.time())}"
+    status, payload = call("POST", f"{INTEGRATION_URL}/api/gl-accounts/sync", {"external_reference": sync_reference})
+    if status not in (200, 201) or payload.get("operation_status") != "COMPLETED":
+        raise BootstrapError(f"GL sync {sync_reference} -> {status}: {json.dumps(payload)}")
     status, rows = call("GET", f"{INTEGRATION_URL}/api/gl-accounts")
     by_reference = {row["external_reference"]: row for row in rows}
 

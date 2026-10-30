@@ -69,10 +69,10 @@ Known weakness: one server is a shared failure point. Acceptable for an assessme
 
 ## D-008: GL account sync (Python side)
 
-**Trigger: an explicit call.** `POST /api/gl-accounts/sync` on the integration service reads every ERP account and syncs the ones not yet synced. Bootstrap will call it before creating the loan product, so GL accounts always exist first. No webhook (the ERP would need to call us and retry) and no polling loop (it would run constantly for a rare event).
+**Trigger: an explicit call.** `POST /api/gl-accounts/sync` on the integration service, with an `external_reference` (D-019), reads every ERP account and syncs the ones not yet synced. Bootstrap will call it before creating the loan product, so GL accounts always exist first. No webhook (the ERP would need to call us and retry) and no polling loop (it would run constantly for a rare event).
 
 **Status per account** lives in the integration service's `gl_account_sync` table, one row per ERP `external_reference` (the primary key):
-`SYNC_PENDING` → `SYNCED`, or `FAILED`.
+`SYNC_PENDING` → `SYNCED`, or `FAILED`, plus `CONFLICT` (D-019).
 
 | Situation | What happens |
 |---|---|
@@ -89,13 +89,13 @@ Known weakness: one server is a shared failure point. Acceptable for an assessme
 
 **Type mapping** is one pure function in `domain/gl_mapping.py`: ASSET→1, LIABILITY→2, EQUITY→3, INCOME→4, EXPENSE→5. Accounts are created as DETAIL accounts with manual entries allowed.
 
-**Not the operations table.** GL sync has its own simple status model from the brief. The operations table and its state machine are for the loan operations in Part B onwards.
+**Two levels.** Each sync *request* is an operation in the operations table (D-019). Each *account* keeps its own simple status model from the brief in `gl_account_sync`, because one request covers many accounts and an account can outlive the request that first saw it (deferred retries).
 
 **Known weaknesses.**
 - Tables are created with SQLAlchemy `create_all` at startup, not migrations. Fine for an empty assessment database; a real service would use Alembic.
 - The integration service used Fineract's stock admin user until Part B; it now uses the least-privilege user from D-013.
 - TLS verification to Fineract is off, because Fineract's image ships a self-signed certificate. Dev only.
-- `FAILED` is final. Fixing the cause and retrying needs a manual step, which isn't built.
+- `FAILED` is final while the ERP account stays the same. If the ERP account changes, the next sync retries it with the new details (D-019).
 
 ## D-009: Fineract setup is one bootstrap script
 
@@ -299,3 +299,39 @@ Partners identify clients and loans only by business ids. Fineract's numeric ids
 **Decision.** Every partner-facing route is mounted under `/api` (`/api/gl-accounts`, `/api/clients`, `/api/loans`). `/health` and `/admin/recover` stay at the root: they are for operators and health checks, not partners, and keeping them apart makes it simple to put a different auth rule or network policy on them later.
 
 **Names that differ from the brief.** `/api/gl-accounts/sync` instead of `/api/accounts/sync`, because the resource is the Fineract GL account and not the ERP account. `POST /api/loans/{loan_reference}/disbursement` instead of `POST /api/loans/{loan_reference}/disburse`, and a separate `POST /api/loans/{loan_reference}/approval`, because each `POST` creates a resource (an operation with its own `external_reference`) and is not a verb on the loan.
+
+## D-019: GL sync requests carry an `external_reference`
+
+**Why.** Part F lists GL sync among the requests that carry an `external_reference` and follow the same replay rules. Until now `POST /api/gl-accounts/sync` took no body, so it had no 200 replay, no 202 while running, and a changed ERP account was ignored without a trace.
+
+**Decision.** The sync request is an operation of type `SYNC_GL_ACCOUNTS` in the operations table, run by the same pipeline as every other operation (D-014, D-016). Body: `{"external_reference": "..."}`.
+
+| Case | Result |
+|---|---|
+| New reference | Runs once: reads the ERP, syncs pending accounts, 201 with every account's status |
+| Same reference, finished | 200 with the original body (the statuses as they were then; `GET /api/gl-accounts` shows them live) |
+| Same reference, still running | 202 with `operation_status`; never a second run |
+| ERP unreachable | `FAILED`, 503; nothing was sent to Fineract. Replays the 503; a new reference retries |
+
+- **The request has no payload besides the reference**, so "same reference, different payload" cannot happen at the request level. It applies per account, below.
+- **Handler.** `prepare` reads the ERP and registers accounts. `execute` pushes every `SYNC_PENDING` account. `look_up` returns nothing: re-running `execute` is safe, because each account is claimed with `SKIP LOCKED` plus a lease, looked up by reference after a Fineract timeout, and Fineract's sync is itself idempotent on the reference (D-007).
+- **No ERP step.** The ERP is only read, so `SYNC_GL_ACCOUNTS` goes `FINERACT_DONE -> COMPLETED`.
+- **Per-account failures do not fail the request.** An account Fineract rejects is `FAILED`, one Fineract cannot reach is `SYNC_PENDING` with a backoff. The request still completes and reports each status.
+
+**Per account: same reference, different details.** Each `gl_account_sync` row keeps the hash of the ERP account it was registered with. When a later sync reads the same `external_reference` with a different hash:
+
+| Row status | Result |
+|---|---|
+| `SYNCED`, `SYNC_PENDING` | `CONFLICT`, with the reason in `last_error`. Never sent again; sync is create-only, and the Fineract account keeps its original details |
+| `FAILED` | Back to `SYNC_PENDING` with the new details, attempts reset. Nothing was created in Fineract, so the corrected account can be sent (same rule as a failed `client_uid` in D-015) |
+| `CONFLICT` | Stays `CONFLICT` |
+
+`CONFLICT` is not overwritten by a push that was already in flight when the change was seen.
+
+**Code is unique in our database too.** `gl_account_sync.erp_code` is now `UNIQUE`, on top of the ERP's and Fineract's own constraints. An ERP account whose code belongs to another synced reference is not registered; the sync logs an error for it.
+
+**Known weaknesses.**
+- The mock ERP is create-only and returns 409 for a changed account, so drift can only come from an ERP whose data changes outside its API. The `CONFLICT` path is a guard, not something the current stack can produce through its APIs.
+- A code clash is only logged, not shown in the sync response.
+- `create_all` does not alter existing tables, so the new unique constraint needs a fresh database (`make reset`).
+- Bootstrap uses a new sync reference on every run (`BOOTSTRAP-GL-SYNC-<epoch seconds>`), so a run never replays an earlier failure. Each run adds one operation row; Fineract and the ERP are unchanged.

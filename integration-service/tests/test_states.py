@@ -54,3 +54,9 @@ def test_every_status_has_a_transition_entry() -> None:
 @pytest.mark.parametrize("status", list(OperationStatus))
 def test_finished_statuses_have_no_way_out(status: OperationStatus) -> None:
     assert is_finished(status) == (not TRANSITIONS[status])
+
+
+def test_gl_sync_operation_completes_without_erp_step() -> None:
+    check_transition(OperationType.SYNC_GL_ACCOUNTS, S.FINERACT_DONE, S.COMPLETED)
+    with pytest.raises(InvalidTransitionError):
+        check_transition(OperationType.SYNC_GL_ACCOUNTS, S.FINERACT_DONE, S.ERP_PENDING)

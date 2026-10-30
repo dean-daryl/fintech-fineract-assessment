@@ -27,8 +27,8 @@ Every scenario is re-runnable against a running stack (`make up`). Logs are in `
 ## S-A2: Same ERP account sent 4 times
 
 - **Initial state:** stack up, no ERP account `GL-1200`.
-- **Request:** `POST mock-erp /api/accounts` 4 times in parallel, then `POST integration /api/gl-accounts/sync` 4 times in parallel.
-- **Response:** ERP: one 201 and three 200. Sync: four 200s. One call shows `SYNCED`, and the others show `SYNC_PENDING` because they found the account locked by the first call and skipped it.
+- **Request:** `POST mock-erp /api/accounts` 4 times in parallel, then `POST integration /api/gl-accounts/sync` 4 times in parallel with the same `external_reference`, then once more with it.
+- **Response:** ERP: one 201 and three 200. Sync: one 201, the other three 202 (still running) or 200 (finished); the replay is 200 with the 201's body (D-019).
 - **ERP state:** 1 account. **Fineract state:** 1 GL account with `externalReference=GL-1200`. **Integration state:** 1 `gl_account_sync` row, `SYNCED`.
 - **Expected:** 1 / 1 / 1, `SYNCED`. **Actual:** PASS (`evidence/simulate-gl-sync.log`). Re-running changes nothing.
 - **Explanation:** ERP unique constraints, then the sync table's primary key plus `SKIP LOCKED`, then Fineract's reference check.

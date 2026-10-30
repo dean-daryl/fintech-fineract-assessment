@@ -25,7 +25,7 @@ class OperationResult:
 
 @dataclass(frozen=True)
 class FineractOutcome:
-    resource_id: int
+    resource_id: int | None
     details: dict[str, Any] = field(default_factory=dict)
 
 

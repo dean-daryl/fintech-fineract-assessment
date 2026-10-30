@@ -11,7 +11,8 @@
     { "key": "fineract_tenant", "value": "default" },
     { "key": "fineract_username", "value": "mifos" },
     { "key": "fineract_password", "value": "password" },
-    { "key": "gl_reference", "value": "GL-1200" }
+    { "key": "gl_reference", "value": "GL-1200" },
+    { "key": "gl_sync_reference", "value": "POSTMAN-GL-SYNC-1" }
   ],
   "item": [
     {
@@ -65,7 +66,9 @@
           "request": {
             "method": "POST",
             "url": "{{integration_url}}/api/gl-accounts/sync",
-            "description": "Reads every ERP account and creates the missing GL accounts in Fineract. Safe to call repeatedly. Returns the sync status of each account."
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"external_reference\": \"{{gl_sync_reference}}\"\n}" },
+            "description": "Reads every ERP account and creates the missing GL accounts in Fineract. One sync per external_reference: the same reference returns 200 with the original result, or 202 while it is still running. Returns the sync status of each account."
           }
         },
         {

@@ -58,14 +58,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         timeout_seconds=settings.fineract_timeout_seconds,
     )
     erp = ErpClient(settings.erp_base_url)
-    app.state.gl_sync = GLSyncService(SessionLocal, erp, fineract, settings)
     pipeline = OperationPipeline(OperationStore(SessionLocal, settings.operation_lease_seconds), settings)
+    app.state.gl_sync = GLSyncService(SessionLocal, erp, fineract, pipeline, settings)
     clients = ClientService(pipeline, ClientCreation(SessionLocal, fineract, settings), fineract)
     loans = LoanService(SessionLocal, pipeline, fineract, settings)
     app.state.pipeline = pipeline
     app.state.clients = clients
     app.state.loans = loans
-    app.state.handlers = [*clients.handlers, *loans.handlers]
+    app.state.handlers = [*app.state.gl_sync.handlers, *clients.handlers, *loans.handlers]
 
     recovery = asyncio.create_task(_recovery_loop(app.state.gl_sync, pipeline, app.state.handlers, settings.recovery_interval_seconds))
     yield

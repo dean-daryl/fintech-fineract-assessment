@@ -4,6 +4,7 @@ from enum import StrEnum
 
 
 class OperationType(StrEnum):
+    SYNC_GL_ACCOUNTS = "SYNC_GL_ACCOUNTS"
     CREATE_CLIENT = "CREATE_CLIENT"
     CREATE_LOAN = "CREATE_LOAN"
     APPROVE_LOAN = "APPROVE_LOAN"
@@ -35,6 +36,7 @@ TRANSITIONS: dict[OperationStatus, frozenset[OperationStatus]] = {
 
 OPERATIONS_WITHOUT_ERP_STEP: frozenset[OperationType] = frozenset(
     {
+        OperationType.SYNC_GL_ACCOUNTS,
         OperationType.CREATE_CLIENT,
         OperationType.CREATE_LOAN,
         OperationType.APPROVE_LOAN,

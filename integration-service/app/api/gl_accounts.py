@@ -1,12 +1,16 @@
 from datetime import datetime
 
-from fastapi import APIRouter, HTTPException, Request, status
-from pydantic import BaseModel, ConfigDict
+from fastapi import APIRouter, Request, status
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, ConfigDict, Field
 
-from app.clients.erp import ErpUnavailableError
 from app.services.gl_sync import GLSyncService
 
 router = APIRouter(tags=["gl-accounts"])
+
+
+class SyncGLAccountsIn(BaseModel):
+    external_reference: str = Field(min_length=1, max_length=100)
 
 
 class GLAccountSyncOut(BaseModel):
@@ -25,13 +29,10 @@ def _service(request: Request) -> GLSyncService:
     return service
 
 
-@router.post("/gl-accounts/sync", response_model=list[GLAccountSyncOut])
-def sync_gl_accounts(request: Request) -> list[GLAccountSyncOut]:
-    try:
-        rows = _service(request).sync_all()
-    except ErpUnavailableError as exc:
-        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(exc)) from exc
-    return [GLAccountSyncOut.model_validate(row) for row in rows]
+@router.post("/gl-accounts/sync", status_code=status.HTTP_201_CREATED)
+def sync_gl_accounts(body: SyncGLAccountsIn, request: Request) -> JSONResponse:
+    result = _service(request).sync(body.external_reference)
+    return JSONResponse(result.body, status_code=result.status_code)
 
 
 @router.get("/gl-accounts", response_model=list[GLAccountSyncOut])

@@ -5,6 +5,10 @@ from enum import StrEnum
 
 class OperationType(StrEnum):
     CREATE_CLIENT = "CREATE_CLIENT"
+    CREATE_LOAN = "CREATE_LOAN"
+    APPROVE_LOAN = "APPROVE_LOAN"
+    DISBURSE_LOAN = "DISBURSE_LOAN"
+    REPAY_LOAN = "REPAY_LOAN"
 
 
 class OperationStatus(StrEnum):
@@ -29,7 +33,15 @@ TRANSITIONS: dict[OperationStatus, frozenset[OperationStatus]] = {
     OperationStatus.NEEDS_RECONCILIATION: frozenset(),
 }
 
-OPERATIONS_WITHOUT_ERP_STEP: frozenset[OperationType] = frozenset({OperationType.CREATE_CLIENT})
+OPERATIONS_WITHOUT_ERP_STEP: frozenset[OperationType] = frozenset(
+    {
+        OperationType.CREATE_CLIENT,
+        OperationType.CREATE_LOAN,
+        OperationType.APPROVE_LOAN,
+        OperationType.DISBURSE_LOAN,
+        OperationType.REPAY_LOAN,
+    }
+)
 
 FINISHED_STATUSES: frozenset[OperationStatus] = frozenset(
     {OperationStatus.COMPLETED, OperationStatus.FAILED, OperationStatus.NEEDS_RECONCILIATION}

@@ -7,4 +7,5 @@ router = APIRouter(tags=["admin"])
 
 @router.post("/admin/recover")
 def recover(request: Request) -> dict[str, int]:
-    return run_recovery(request.app.state.gl_sync, request.app.state.clients)
+    state = request.app.state
+    return run_recovery(state.gl_sync, state.pipeline, state.handlers)

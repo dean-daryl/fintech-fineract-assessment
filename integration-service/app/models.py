@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Any
 
-from sqlalchemy import BigInteger, DateTime, ForeignKey, Identity, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy import BigInteger, DateTime, ForeignKey, Identity, Integer, Sequence, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -63,3 +63,25 @@ class ClientMap(Base):
     fineract_client_id: Mapped[int | None] = mapped_column(BigInteger, unique=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+loan_reference_sequence = Sequence("loan_reference_seq", metadata=Base.metadata)
+
+
+class LoanMap(Base):
+    __tablename__ = "loan_map"
+
+    loan_reference: Mapped[str] = mapped_column(String(30), primary_key=True)
+    client_uid: Mapped[str] = mapped_column(String(100), ForeignKey("client_map.client_uid"))
+    operation_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("operations.id"), unique=True)
+    fineract_loan_id: Mapped[int | None] = mapped_column(BigInteger, unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class LoanDisbursement(Base):
+    __tablename__ = "loan_disbursement"
+
+    loan_reference: Mapped[str] = mapped_column(String(30), ForeignKey("loan_map.loan_reference"), primary_key=True)
+    operation_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("operations.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

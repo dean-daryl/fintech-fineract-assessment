@@ -79,9 +79,11 @@ class OperationStore:
                 row.erp_transaction_id = erp_transaction_id
             if last_error is not None:
                 row.last_error = last_error
-            if is_finished(target):
+            if response_code is not None:
                 row.response_code = response_code
+            if response is not None:
                 row.response = response
+            if is_finished(target):
                 row.locked_until = None
         log.info("Operation status changed", extra=self._log_fields(row))
         return row

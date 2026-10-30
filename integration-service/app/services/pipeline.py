@@ -1,0 +1,215 @@
+import logging
+import time
+from collections.abc import Sequence
+from dataclasses import dataclass, field
+from typing import Any, Protocol
+
+from app.clients.fineract import FineractError, FineractRejectedError, FineractTimeoutError, FineractUnavailableError
+from app.config import Settings
+from app.domain.idempotency import ReplayKind, payload_hash, replay_kind
+from app.domain.states import OperationStatus, OperationType
+from app.models import Operation
+from app.services.operations import OperationStore
+
+log = logging.getLogger(__name__)
+
+RECOVERY_BATCH_SIZE = 100
+FINERACT_NOT_AUTHORIZED = "error.msg.not.authorized"
+
+
+@dataclass(frozen=True)
+class OperationResult:
+    status_code: int
+    body: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class FineractOutcome:
+    resource_id: int
+    details: dict[str, Any] = field(default_factory=dict)
+
+
+class OperationRejected(Exception):
+    def __init__(self, status_code: int, message: str) -> None:
+        self.status_code = status_code
+        super().__init__(message)
+
+
+class OperationHandler(Protocol):
+    operation_type: OperationType
+
+    def prepare(self, operation: Operation) -> None: ...
+
+    def look_up(self, operation: Operation) -> FineractOutcome | None: ...
+
+    def execute(self, operation: Operation) -> FineractOutcome: ...
+
+    def record(self, operation: Operation, outcome: FineractOutcome) -> None: ...
+
+    def describe(self, operation: Operation) -> dict[str, Any]: ...
+
+
+def rejection_status_code(status_code: int, code: str | None) -> int:
+    if code == FINERACT_NOT_AUTHORIZED:
+        return 502
+    if status_code == 403:
+        return 409
+    if status_code == 404:
+        return 404
+    return 422
+
+
+class OperationPipeline:
+    def __init__(self, store: OperationStore, settings: Settings) -> None:
+        self._store = store
+        self._settings = settings
+
+    def submit(self, handler: OperationHandler, external_reference: str, payload: dict[str, Any]) -> OperationResult:
+        claim = self._store.claim(handler.operation_type, external_reference, payload)
+        if not claim.created:
+            return self._replay(handler, claim.operation, payload_hash(payload))
+        return self._run(handler, claim.operation, look_up_first=False)
+
+    def recover(self, handlers: Sequence[OperationHandler]) -> int:
+        by_type = {handler.operation_type: handler for handler in handlers}
+        operations = self._store.claim_due(list(by_type), RECOVERY_BATCH_SIZE)
+        for operation in operations:
+            try:
+                self._run(by_type[OperationType(operation.operation_type)], operation, look_up_first=True)
+            except Exception:
+                log.exception("Operation recovery failed", extra=_log_fields(operation))
+        return len(operations)
+
+    def _replay(self, handler: OperationHandler, operation: Operation, request_hash: str) -> OperationResult:
+        kind = replay_kind(OperationStatus(operation.status), operation.payload_hash, request_hash)
+        if kind is ReplayKind.PAYLOAD_CONFLICT:
+            return OperationResult(
+                409,
+                {
+                    "external_reference": operation.external_reference,
+                    "error": "external_reference was already used with a different payload",
+                },
+            )
+        if kind is ReplayKind.IN_PROGRESS:
+            return OperationResult(202, self._body(handler, operation, OperationStatus(operation.status)))
+        assert operation.response is not None and operation.response_code is not None
+        return OperationResult(200 if operation.response_code == 201 else operation.response_code, operation.response)
+
+    def _run(self, handler: OperationHandler, operation: Operation, look_up_first: bool) -> OperationResult:
+        status = OperationStatus(operation.status)
+
+        if status is OperationStatus.RECEIVED:
+            try:
+                handler.prepare(operation)
+            except OperationRejected as exc:
+                return self._fail(handler, operation, exc.status_code, str(exc))
+            except (FineractUnavailableError, FineractTimeoutError) as exc:
+                return self._retry_later(handler, operation, exc)
+            except FineractRejectedError as exc:
+                return self._fail(handler, operation, rejection_status_code(exc.status_code, exc.code), exc.message)
+            operation = self._store.transition(operation.id, OperationStatus.FINERACT_PENDING)
+            status = OperationStatus.FINERACT_PENDING
+
+        if status is OperationStatus.FINERACT_PENDING:
+            try:
+                outcome = self._push(handler, operation, look_up_first)
+            except OperationRejected as exc:
+                return self._fail(handler, operation, exc.status_code, str(exc))
+            except FineractRejectedError as exc:
+                return self._rejected(handler, operation, exc)
+            except (FineractUnavailableError, FineractTimeoutError) as exc:
+                return self._retry_later(handler, operation, exc)
+            return self._complete(handler, operation, outcome)
+
+        return self._finish(handler, operation)
+
+    def _push(self, handler: OperationHandler, operation: Operation, look_up_first: bool) -> FineractOutcome:
+        look_up = look_up_first
+        last_error: FineractError | None = None
+        for attempt in range(self._settings.operation_inline_attempts):
+            if attempt:
+                time.sleep(0.5 * 2 ** (attempt - 1))
+            try:
+                if look_up:
+                    existing = handler.look_up(operation)
+                    if existing is not None:
+                        return existing
+                return handler.execute(operation)
+            except FineractUnavailableError as exc:
+                last_error = exc
+            except FineractTimeoutError as exc:
+                last_error = exc
+                look_up = True
+            log.warning("Fineract attempt failed", extra=_log_fields(operation))
+        assert last_error is not None
+        raise last_error
+
+    def _rejected(self, handler: OperationHandler, operation: Operation, error: FineractRejectedError) -> OperationResult:
+        try:
+            existing = handler.look_up(operation)
+        except OperationRejected as exc:
+            return self._fail(handler, operation, exc.status_code, str(exc))
+        except FineractError:
+            existing = None
+        if existing is not None:
+            return self._complete(handler, operation, existing)
+        return self._fail(
+            handler, operation, rejection_status_code(error.status_code, error.code), f"Fineract rejected the request: {error.message}"
+        )
+
+    def _retry_later(self, handler: OperationHandler, operation: Operation, error: FineractError) -> OperationResult:
+        if operation.attempts + 1 < self._settings.operation_max_attempts:
+            operation = self._store.defer(operation.id, str(error))
+            return OperationResult(202, self._body(handler, operation, OperationStatus(operation.status)))
+        if OperationStatus(operation.status) is OperationStatus.RECEIVED:
+            return self._fail(handler, operation, 503, f"Fineract was unavailable on every attempt: {error}")
+        try:
+            existing = handler.look_up(operation)
+        except OperationRejected as exc:
+            return self._fail(handler, operation, exc.status_code, str(exc))
+        except FineractError:
+            body = self._body(handler, operation, OperationStatus.NEEDS_RECONCILIATION)
+            self._store.transition(
+                operation.id,
+                OperationStatus.NEEDS_RECONCILIATION,
+                last_error=str(error),
+                response_code=202,
+                response=body,
+            )
+            return OperationResult(202, body)
+        if existing is None:
+            return self._fail(handler, operation, 503, f"Fineract did not accept the request after every attempt: {error}")
+        return self._complete(handler, operation, existing)
+
+    def _complete(self, handler: OperationHandler, operation: Operation, outcome: FineractOutcome) -> OperationResult:
+        handler.record(operation, outcome)
+        operation = self._store.transition(
+            operation.id,
+            OperationStatus.FINERACT_DONE,
+            fineract_resource_id=outcome.resource_id,
+            response=outcome.details,
+        )
+        return self._finish(handler, operation)
+
+    def _finish(self, handler: OperationHandler, operation: Operation) -> OperationResult:
+        body = {**self._body(handler, operation, OperationStatus.COMPLETED), **(operation.response or {})}
+        self._store.transition(operation.id, OperationStatus.COMPLETED, response_code=201, response=body)
+        return OperationResult(201, body)
+
+    def _fail(self, handler: OperationHandler, operation: Operation, status_code: int, error: str) -> OperationResult:
+        body = {**self._body(handler, operation, OperationStatus.FAILED), "error": error}
+        self._store.transition(operation.id, OperationStatus.FAILED, last_error=error, response_code=status_code, response=body)
+        return OperationResult(status_code, body)
+
+    @staticmethod
+    def _body(handler: OperationHandler, operation: Operation, status: OperationStatus) -> dict[str, Any]:
+        return {"external_reference": operation.external_reference, **handler.describe(operation), "operation_status": status.value}
+
+
+def _log_fields(operation: Operation) -> dict[str, Any]:
+    return {
+        "external_reference": operation.external_reference,
+        "client_uid": operation.payload.get("client_uid"),
+        "loan_reference": operation.payload.get("loan_reference"),
+        "status": operation.status,
+    }

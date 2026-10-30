@@ -9,23 +9,31 @@ from fastapi import FastAPI, Request, Response
 from app.api.admin import router as admin_router
 from app.api.clients import router as clients_router
 from app.api.gl_accounts import router as gl_accounts_router
+from app.api.loans import router as loans_router
 from app.clients.erp import ErpClient
 from app.clients.fineract import FineractClient
 from app.config import get_settings
 from app.db import Base, SessionLocal, engine
 from app.logs import configure_logging, correlation_id
-from app.services.clients import ClientService
+from app.services.clients import ClientCreation, ClientService
 from app.services.gl_sync import GLSyncService
+from app.services.loans import LoanService
 from app.services.operations import OperationStore
+from app.services.pipeline import OperationHandler, OperationPipeline
 from app.services.recovery import run_recovery
 
 log = logging.getLogger(__name__)
 
 
-async def _recovery_loop(gl_sync: GLSyncService, clients: ClientService, interval_seconds: int) -> None:
+async def _recovery_loop(
+    gl_sync: GLSyncService,
+    pipeline: OperationPipeline,
+    handlers: list[OperationHandler],
+    interval_seconds: int,
+) -> None:
     while True:
         try:
-            processed = await asyncio.to_thread(run_recovery, gl_sync, clients)
+            processed = await asyncio.to_thread(run_recovery, gl_sync, pipeline, handlers)
             if any(processed.values()):
                 log.info("Recovery sweep processed %s", processed)
         except Exception:
@@ -49,9 +57,15 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     )
     erp = ErpClient(settings.erp_base_url)
     app.state.gl_sync = GLSyncService(SessionLocal, erp, fineract, settings)
-    app.state.clients = ClientService(SessionLocal, OperationStore(SessionLocal, settings.operation_lease_seconds), fineract, settings)
+    pipeline = OperationPipeline(OperationStore(SessionLocal, settings.operation_lease_seconds), settings)
+    clients = ClientService(pipeline, ClientCreation(SessionLocal, fineract, settings), fineract)
+    loans = LoanService(SessionLocal, pipeline, fineract, settings)
+    app.state.pipeline = pipeline
+    app.state.clients = clients
+    app.state.loans = loans
+    app.state.handlers = [*clients.handlers, *loans.handlers]
 
-    recovery = asyncio.create_task(_recovery_loop(app.state.gl_sync, app.state.clients, settings.recovery_interval_seconds))
+    recovery = asyncio.create_task(_recovery_loop(app.state.gl_sync, pipeline, app.state.handlers, settings.recovery_interval_seconds))
     yield
     recovery.cancel()
     with suppress(asyncio.CancelledError):
@@ -61,6 +75,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 app = FastAPI(title="Integration Service", lifespan=lifespan)
 app.include_router(gl_accounts_router)
 app.include_router(clients_router)
+app.include_router(loans_router)
 app.include_router(admin_router)
 
 

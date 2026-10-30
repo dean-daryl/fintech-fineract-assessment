@@ -246,3 +246,50 @@ Partners identify clients and loans only by business ids. Fineract's numeric ids
 **The `client_uid` is reserved before Fineract is called.** The create operation inserts its `client_map` row first, so two requests with different `external_reference`s but the same `client_uid` cannot both reach Fineract. The second finds the row owned by another operation and fails with 409. A `client_uid` whose owning operation `FAILED` (nothing was created in Fineract) can be taken over by a new request, so a partner can fix a rejected request and send it again under a new `external_reference`.
 
 **Two guards, both in a database.** `client_map`'s primary key in ours, and Fineract's own `UNIQUE (external_id)` on `m_client` (checked on the running 1.16.1 database: `m_client_external_id_key`) behind it.
+
+## D-016: One pipeline, one handler per operation type
+
+`services/pipeline.py` runs every partner operation: claim, replay, prepare, Fineract call, retries, give-up and recovery. It is written once. Each operation type supplies a small handler (`prepare`, `look_up`, `execute`, `record`, `describe`), so client creation and the four loan operations share the same idempotency and retry code instead of five copies.
+
+| Handler step | Runs | Purpose |
+|---|---|---|
+| `prepare` | Once, in `RECEIVED` | Local guards before Fineract is called: reservations, live validation. Raising `OperationRejected` gives `FAILED` without touching Fineract |
+| `execute` | `FINERACT_PENDING` | The state-changing Fineract call |
+| `look_up` | After a timeout, on recovery, and when Fineract rejects | Finds the resource by our reference, so a lost response is never re-sent (rule 4) |
+| `record` | Before `FINERACT_DONE` | Saves the Fineract id in the mapping table |
+
+- **A Fineract rejection is checked with a lookup first.** If the resource already exists under our reference (an earlier attempt succeeded but its response was lost), the operation completes instead of failing.
+- **Fineract's result is saved with `FINERACT_DONE`** (for a repayment: Fineract's principal and interest portions). Completing from `FINERACT_DONE` needs no further Fineract call.
+- **Rejection codes.** Fineract 403 (business rule or data integrity, e.g. "already approved") → 409; 404 → 404; other 4xx → 422; Fineract's "not authorized" → 502, because that is our misconfiguration, not the partner's fault.
+
+## D-017: Loan lifecycle (Part D)
+
+**Endpoints.** `POST /loans`, `POST /loans/{loan_reference}/approval`, `/disbursement`, `/repayments`, and `GET /loans/{loan_reference}`. Each `POST` carries its own `external_reference` and is an operation (D-014).
+
+**`loan_reference` is issued by us** from a Postgres sequence (`loan_reference_seq`) as `LN-<year>-<6 digits>`, inside the application's `prepare` step and only once per operation (`loan_map.operation_id` is unique). A repeated application always returns the same `loan_reference`. The year is the year of issue (tenant timezone). The sequence is global rather than per year, so numbers do not restart in January. Gaps are possible (a rejected application still uses a number) and harmless.
+
+**`loan_map`** holds `loan_reference` (primary key), `client_uid`, the owning operation and Fineract's loan id. Like `client_map`, it holds ids only. Status and balances are always read live (rule 7).
+
+**Terms come from the product.** The service reads the SAF product from Fineract (repayments, frequency, rate, interest method, amortization, strategy) and builds the application from it. The partner sends only the principal and dates, so the product stays the single source of the loan's terms.
+
+**Every loan request is checked against our own data before Fineract.**
+
+| Operation | `prepare` guard | Fineract guard behind it | `look_up` |
+|---|---|---|---|
+| Application | Client was onboarded here, and live validation passes (exists, active, name matches) | `m_loan.external_id` unique | Loan by `loan_reference` |
+| Approval | Loan exists | Loan state | Loan's status is approved or later |
+| Disbursement | Row lock on `loan_map` + `loan_disbursement` primary key (one slot per loan) | Loan state | Disbursement transaction by `external_reference` |
+| Repayment | Live: loan active, amount ≤ Fineract's total outstanding | `m_loan_transaction.external_id` unique | Repayment transaction by `external_reference` |
+
+- **Disbursement happens once (rule 3).** A second disbursement with a different `external_reference` finds the slot owned by another operation and gets 409 before Fineract is called. A slot whose owner `FAILED` can be taken over, so a disbursement Fineract rejected can be sent again.
+- **Disbursement and repayment transactions carry our `external_reference` as their Fineract `externalId`.** Both accept it at 1.16.1 (`LoanTransactionValidatorImpl`), and Fineract's unique index on `m_loan_transaction.external_id` is the second guard. The lookup also checks the transaction type, so a reference already used by a disbursement is never mistaken for a repayment.
+- **Approval has no transaction to look up**, so its lookup is the loan's status. Consequence: approving an already-approved loan with a new reference returns success, not 409. Nothing executes twice.
+- **The overpayment check reads Fineract's live balance** and rejects anything above it (422), so the loan ends "Closed (obligations met)", never "Overpaid". The final payment is Fineract's own `totalOutstanding`, never our arithmetic.
+- **Amounts are whole RWF** (no minor unit, D-009). Any Fineract amount with a fractional part raises instead of being rounded silently.
+- **Dates.** Partners may send past dates. Fineract allows backdated transactions on this tenant (`disallow-backdated-transactions` is off), and the simulation uses them so the three partial repayments fall on real due dates and carry real interest. Without a date, the service uses today in the tenant timezone.
+- **Disbursement and repayment skip the ERP step for now.** Journal posting is a later part. That part removes them from `OPERATIONS_WITHOUT_ERP_STEP`, and the state machine then forces them through `ERP_PENDING`.
+
+**Known weaknesses.**
+- Two different repayments that both pass the overpayment check at the same moment could together exceed the balance. Fineract then records an overpayment. A per-loan lock around the Fineract call would close this; not built.
+- `GET /loans/{loan_reference}` lists every Fineract transaction on the loan. A transaction made outside this service would show `external_reference: null`.
+- No reschedule, write-off, undo or charges: outside the brief.

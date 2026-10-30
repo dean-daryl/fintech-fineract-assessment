@@ -5,6 +5,14 @@ import httpx
 
 from app.domain.clients import FineractClientPayload, FineractClientRecord, parse_fineract_client
 from app.domain.gl_mapping import FineractGLAccountPayload
+from app.domain.loans import (
+    FineractLoanRecord,
+    FineractLoanTransaction,
+    LoanProductTerms,
+    parse_fineract_loan,
+    parse_loan_product,
+    parse_loan_transaction,
+)
 
 
 class FineractError(Exception):
@@ -83,17 +91,58 @@ class FineractClient:
             raise
         return parse_fineract_client(body)
 
+    def find_loan_product(self, short_name: str) -> LoanProductTerms | None:
+        products = self._request_list("GET", "/loanproducts")
+        match = next((product for product in products if product.get("shortName") == short_name), None)
+        if match is None:
+            return None
+        return parse_loan_product(self._request("GET", f"/loanproducts/{match['id']}"))
+
+    def create_loan(self, payload: dict[str, Any]) -> int:
+        body = self._request("POST", "/loans", json=payload)
+        return int(body["resourceId"])
+
+    def find_loan_by_external_id(self, loan_reference: str) -> FineractLoanRecord | None:
+        try:
+            body = self._request("GET", f"/loans/external-id/{loan_reference}", params={"associations": "transactions"})
+        except FineractRejectedError as exc:
+            if exc.status_code == 404:
+                return None
+            raise
+        return parse_fineract_loan(body)
+
+    def loan_command(self, fineract_loan_id: int, command: str, payload: dict[str, Any]) -> None:
+        self._request("POST", f"/loans/{fineract_loan_id}", json=payload, params={"command": command})
+
+    def repay_loan(self, fineract_loan_id: int, payload: dict[str, Any]) -> None:
+        self._request("POST", f"/loans/{fineract_loan_id}/transactions", json=payload, params={"command": "repayment"})
+
+    def find_loan_transaction(self, loan_reference: str, external_id: str) -> FineractLoanTransaction | None:
+        try:
+            body = self._request("GET", f"/loans/external-id/{loan_reference}/transactions/external-id/{external_id}")
+        except FineractRejectedError as exc:
+            if exc.status_code == 404:
+                return None
+            raise
+        return parse_loan_transaction(body)
+
     def _request_list(self, method: str, path: str) -> list[dict[str, Any]]:
         result: list[dict[str, Any]] = self._send(method, path, None).json()
         return result
 
-    def _request(self, method: str, path: str, json: dict[str, Any] | None = None) -> dict[str, Any]:
-        result: dict[str, Any] = self._send(method, path, json).json()
+    def _request(
+        self,
+        method: str,
+        path: str,
+        json: dict[str, Any] | None = None,
+        params: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        result: dict[str, Any] = self._send(method, path, json, params).json()
         return result
 
-    def _send(self, method: str, path: str, json: dict[str, Any] | None) -> httpx.Response:
+    def _send(self, method: str, path: str, json: dict[str, Any] | None, params: dict[str, str] | None = None) -> httpx.Response:
         try:
-            response = self._http.request(method, path, json=json)
+            response = self._http.request(method, path, json=json, params=params)
         except (httpx.ConnectError, httpx.ConnectTimeout, httpx.PoolTimeout) as exc:
             raise FineractUnavailableError(f"{method} {path}: {exc!r}") from exc
         except httpx.TimeoutException as exc:

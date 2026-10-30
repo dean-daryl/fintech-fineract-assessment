@@ -64,13 +64,13 @@
           "name": "Sync GL accounts",
           "request": {
             "method": "POST",
-            "url": "{{integration_url}}/gl-accounts/sync",
+            "url": "{{integration_url}}/api/gl-accounts/sync",
             "description": "Reads every ERP account and creates the missing GL accounts in Fineract. Safe to call repeatedly. Returns the sync status of each account."
           }
         },
         {
           "name": "List GL sync statuses",
-          "request": { "method": "GET", "url": "{{integration_url}}/gl-accounts" }
+          "request": { "method": "GET", "url": "{{integration_url}}/api/gl-accounts" }
         },
         {
           "name": "Run recovery sweep",

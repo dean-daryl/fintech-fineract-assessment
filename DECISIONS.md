@@ -69,7 +69,7 @@ Known weakness: one server is a shared failure point. Acceptable for an assessme
 
 ## D-008: GL account sync (Python side)
 
-**Trigger: an explicit call.** `POST /gl-accounts/sync` on the integration service reads every ERP account and syncs the ones not yet synced. Bootstrap will call it before creating the loan product, so GL accounts always exist first. No webhook (the ERP would need to call us and retry) and no polling loop (it would run constantly for a rare event).
+**Trigger: an explicit call.** `POST /api/gl-accounts/sync` on the integration service reads every ERP account and syncs the ones not yet synced. Bootstrap will call it before creating the loan product, so GL accounts always exist first. No webhook (the ERP would need to call us and retry) and no polling loop (it would run constantly for a rare event).
 
 **Status per account** lives in the integration service's `gl_account_sync` table, one row per ERP `external_reference` (the primary key):
 `SYNC_PENDING` → `SYNCED`, or `FAILED`.
@@ -124,7 +124,7 @@ The loan product uses `accountingRule=2` (cash based).
 
 ## D-011: Chart of accounts and product GL mappings
 
-The chart of accounts belongs to the ERP. Bootstrap creates it in the ERP (`POST /api/accounts`, which returns 200 for an identical account), then calls `POST /gl-accounts/sync` on the integration service. Bootstrap stops if any account is not `SYNCED`. Fineract GL ids are looked up by external reference and used only inside bootstrap.
+The chart of accounts belongs to the ERP. Bootstrap creates it in the ERP (`POST /api/accounts`, which returns 200 for an identical account), then calls `POST /api/gl-accounts/sync` on the integration service. Bootstrap stops if any account is not `SYNCED`. Fineract GL ids are looked up by external reference and used only inside bootstrap.
 
 All accounts are in RWF, with `external_reference = GL-<code>`:
 
@@ -264,7 +264,7 @@ Partners identify clients and loans only by business ids. Fineract's numeric ids
 
 ## D-017: Loan lifecycle (Part D)
 
-**Endpoints.** `POST /loans`, `POST /loans/{loan_reference}/approval`, `/disbursement`, `/repayments`, and `GET /loans/{loan_reference}`. Each `POST` carries its own `external_reference` and is an operation (D-014).
+**Endpoints.** `POST /api/loans`, `POST /api/loans/{loan_reference}/approval`, `POST /api/loans/{loan_reference}/disbursement`, `POST /api/loans/{loan_reference}/repayments`, and `GET /api/loans/{loan_reference}`. Each `POST` carries its own `external_reference` and is an operation (D-014).
 
 **`loan_reference` is issued by us** from a Postgres sequence (`loan_reference_seq`) as `LN-<year>-<6 digits>`, inside the application's `prepare` step and only once per operation (`loan_map.operation_id` is unique). A repeated application always returns the same `loan_reference`. The year is the year of issue (tenant timezone). The sequence is global rather than per year, so numbers do not restart in January. Gaps are possible (a rejected application still uses a number) and harmless.
 
@@ -291,5 +291,11 @@ Partners identify clients and loans only by business ids. Fineract's numeric ids
 
 **Known weaknesses.**
 - Two different repayments that both pass the overpayment check at the same moment could together exceed the balance. Fineract then records an overpayment. A per-loan lock around the Fineract call would close this; not built.
-- `GET /loans/{loan_reference}` lists every Fineract transaction on the loan. A transaction made outside this service would show `external_reference: null`.
+- `GET /api/loans/{loan_reference}` lists every Fineract transaction on the loan. A transaction made outside this service would show `external_reference: null`.
 - No reschedule, write-off, undo or charges: outside the brief.
+
+## D-018: Partner routes live under `/api`
+
+**Decision.** Every partner-facing route is mounted under `/api` (`/api/gl-accounts`, `/api/clients`, `/api/loans`). `/health` and `/admin/recover` stay at the root: they are for operators and health checks, not partners, and keeping them apart makes it simple to put a different auth rule or network policy on them later.
+
+**Names that differ from the brief.** `/api/gl-accounts/sync` instead of `/api/accounts/sync`, because the resource is the Fineract GL account and not the ERP account. `POST /api/loans/{loan_reference}/disbursement` instead of `POST /api/loans/{loan_reference}/disburse`, and a separate `POST /api/loans/{loan_reference}/approval`, because each `POST` creates a resource (an operation with its own `external_reference`) and is not a verb on the loan.

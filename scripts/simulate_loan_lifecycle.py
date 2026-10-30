@@ -120,11 +120,11 @@ def main() -> int:
 
     print("1. Onboard the client")
     client = {"external_reference": f"SIM-{RUN}-CLIENT", "client_uid": CLIENT_UID, "name": CLIENT_NAME, "activation_date": ACTIVATION_DATE}
-    code, body = ours("POST", "/clients", client)
-    show("POST /clients", code, body)
+    code, body = ours("POST", "/api/clients", client)
+    show("POST /api/clients", code, body)
     check("client created (201)", code == 201)
-    code, body = ours("GET", f"/clients/{CLIENT_UID}/validation?name={urllib.parse.quote(CLIENT_NAME)}")
-    show("GET /clients/{uid}/validation", code, body)
+    code, body = ours("GET", f"/api/clients/{CLIENT_UID}/validation?name={urllib.parse.quote(CLIENT_NAME)}")
+    show("GET /api/clients/{uid}/validation", code, body)
     check("client valid: exists, active, name matches", code == 200 and body["valid"])
 
     print("\n2. Loan application")
@@ -135,22 +135,22 @@ def main() -> int:
         "principal": PRINCIPAL,
         "submitted_on_date": LOAN_DATE,
     }
-    code, body = ours("POST", "/loans", application)
-    show("POST /loans", code, body)
+    code, body = ours("POST", "/api/loans", application)
+    show("POST /api/loans", code, body)
     check("application created (201)", code == 201)
     loan_reference = body.get("loan_reference") if isinstance(body, dict) else None
     if not loan_reference:
         return summary()
-    code, again = ours("POST", "/loans", application)
+    code, again = ours("POST", "/api/loans", application)
     check("same application again returns the same loan_reference (200)", code == 200 and again.get("loan_reference") == loan_reference)
-    code, conflict = ours("POST", "/loans", {**application, "principal": PRINCIPAL + 1})
+    code, conflict = ours("POST", "/api/loans", {**application, "principal": PRINCIPAL + 1})
     check("same reference, different principal -> 409", code == 409)
     state = stage("application", loan_reference)
     check("Fineract status: Submitted and pending approval", state.get("status") == "Submitted and pending approval")
 
     print("\n3. Approval")
-    code, body = ours("POST", f"/loans/{loan_reference}/approval", {"external_reference": f"SIM-{RUN}-APPROVE", "approved_on_date": LOAN_DATE})
-    show("POST /loans/{ref}/approval", code, body)
+    code, body = ours("POST", f"/api/loans/{loan_reference}/approval", {"external_reference": f"SIM-{RUN}-APPROVE", "approved_on_date": LOAN_DATE})
+    show("POST /api/loans/{ref}/approval", code, body)
     check("approved (201)", code == 201)
     state = stage("approval", loan_reference)
     check("Fineract status: Approved", state.get("status") == "Approved")
@@ -159,7 +159,7 @@ def main() -> int:
     results = parallel(
         10,
         lambda i: ours(
-            "POST", f"/loans/{loan_reference}/disbursement", {"external_reference": f"SIM-{RUN}-DISBURSE-{i}", "disbursed_on_date": LOAN_DATE}
+            "POST", f"/api/loans/{loan_reference}/disbursement", {"external_reference": f"SIM-{RUN}-DISBURSE-{i}", "disbursed_on_date": LOAN_DATE}
         ),
     )
     codes = sorted(code for code, _ in results)
@@ -177,13 +177,13 @@ def main() -> int:
         print(f"\n{4 + number}. Partial repayment {number}: {PARTIAL_REPAYMENT} RWF on {repayment_date}")
         repayment = {"external_reference": f"SIM-{RUN}-REPAY-{number}", "amount": PARTIAL_REPAYMENT, "transaction_date": repayment_date}
         if number == 1:
-            results = [ours("POST", f"/loans/{loan_reference}/repayments", repayment) for _ in range(4)]
+            results = [ours("POST", f"/api/loans/{loan_reference}/repayments", repayment) for _ in range(4)]
             print(f"  same request sent 4 times -> {[code for code, _ in results]}")
             code, body = results[0]
             check("4 identical requests: one 201 then three 200 with the same body", [c for c, _ in results] == [201, 200, 200, 200] and all(b == body for _, b in results))
         else:
-            code, body = ours("POST", f"/loans/{loan_reference}/repayments", repayment)
-        show("POST /loans/{ref}/repayments", code, body)
+            code, body = ours("POST", f"/api/loans/{loan_reference}/repayments", repayment)
+        show("POST /api/loans/{ref}/repayments", code, body)
         check(f"repayment {number} split by Fineract: principal + interest = amount", code in (200, 201) and body["principal_portion"] + body["interest_portion"] == PARTIAL_REPAYMENT)
         state = stage(f"repayment {number}", loan_reference)
         matching = [t for t in state.get("transactions", []) if t[1] == repayment["external_reference"]]
@@ -192,24 +192,24 @@ def main() -> int:
             check("our response carries Fineract's own portions", (matching[0][3], matching[0][4]) == (body["principal_portion"], body["interest_portion"]))
 
     print(f"\n8. Final payoff on {PAYOFF_DATE}")
-    code, loan = ours("GET", f"/loans/{loan_reference}")
+    code, loan = ours("GET", f"/api/loans/{loan_reference}")
     payoff = loan["balances"]["total_outstanding"]
-    print(f"  GET /loans/{{ref}} -> total_outstanding {payoff} (read live from Fineract)")
-    code, body = ours("POST", f"/loans/{loan_reference}/repayments", {"external_reference": f"SIM-{RUN}-REPAY-1", "amount": payoff, "transaction_date": PAYOFF_DATE})
+    print(f"  GET /api/loans/{{ref}} -> total_outstanding {payoff} (read live from Fineract)")
+    code, body = ours("POST", f"/api/loans/{loan_reference}/repayments", {"external_reference": f"SIM-{RUN}-REPAY-1", "amount": payoff, "transaction_date": PAYOFF_DATE})
     check("reusing a repayment reference with a different amount -> 409", code == 409)
-    code, body = ours("POST", f"/loans/{loan_reference}/repayments", {"external_reference": f"SIM-{RUN}-OVERPAY", "amount": payoff + 1, "transaction_date": PAYOFF_DATE})
+    code, body = ours("POST", f"/api/loans/{loan_reference}/repayments", {"external_reference": f"SIM-{RUN}-OVERPAY", "amount": payoff + 1, "transaction_date": PAYOFF_DATE})
     check("paying more than Fineract's outstanding balance -> 422", code == 422)
-    code, body = ours("POST", f"/loans/{loan_reference}/repayments", {"external_reference": f"SIM-{RUN}-PAYOFF", "amount": payoff, "transaction_date": PAYOFF_DATE})
-    show("POST /loans/{ref}/repayments", code, body)
+    code, body = ours("POST", f"/api/loans/{loan_reference}/repayments", {"external_reference": f"SIM-{RUN}-PAYOFF", "amount": payoff, "transaction_date": PAYOFF_DATE})
+    show("POST /api/loans/{ref}/repayments", code, body)
     check("payoff accepted (201)", code == 201)
     state = stage("final payoff", loan_reference)
     check("Fineract status: Closed (obligations met)", state.get("status") == "Closed (obligations met)")
     check("Fineract total outstanding is 0", state.get("totalOutstanding") == 0)
 
     print("\n9. Our view of the loan")
-    code, loan = ours("GET", f"/loans/{loan_reference}")
+    code, loan = ours("GET", f"/api/loans/{loan_reference}")
     print(json.dumps(loan, indent=2))
-    check("GET /loans/{ref} reports Fineract's status", loan.get("status") == "Closed (obligations met)")
+    check("GET /api/loans/{ref} reports Fineract's status", loan.get("status") == "Closed (obligations met)")
 
     print("\n10. No Fineract numeric ids in any response")
     leaked = find_keys(responses, FINERACT_ID_KEYS)

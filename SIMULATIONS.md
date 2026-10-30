@@ -27,7 +27,7 @@ Every scenario is re-runnable against a running stack (`make up`). Logs are in `
 ## S-A2: Same ERP account sent 4 times
 
 - **Initial state:** stack up, no ERP account `GL-1200`.
-- **Request:** `POST mock-erp /api/accounts` 4 times in parallel, then `POST integration /gl-accounts/sync` 4 times in parallel.
+- **Request:** `POST mock-erp /api/accounts` 4 times in parallel, then `POST integration /api/gl-accounts/sync` 4 times in parallel.
 - **Response:** ERP: one 201 and three 200. Sync: four 200s. One call shows `SYNCED`, and the others show `SYNC_PENDING` because they found the account locked by the first call and skipped it.
 - **ERP state:** 1 account. **Fineract state:** 1 GL account with `externalReference=GL-1200`. **Integration state:** 1 `gl_account_sync` row, `SYNCED`.
 - **Expected:** 1 / 1 / 1, `SYNCED`. **Actual:** PASS (`evidence/simulate-gl-sync.log`). Re-running changes nothing.
@@ -36,7 +36,7 @@ Every scenario is re-runnable against a running stack (`make up`). Logs are in `
 ## S-A3: Fineract down during sync
 
 - **Initial state:** `GL-1200` synced. A new ERP account `GL-4100` (INCOME).
-- **Request:** `docker compose stop fineract`, then `POST /gl-accounts/sync`. Then `docker compose start fineract`, wait until healthy, `POST /admin/recover`.
+- **Request:** `docker compose stop fineract`, then `POST /api/gl-accounts/sync`. Then `docker compose start fineract`, wait until healthy, `POST /admin/recover`.
 - **Response:** while Fineract is down, `GL-4100` is `SYNC_PENDING` with the connection error recorded. After recovery: `{"gl_accounts_processed": 1}`.
 - **Fineract state:** `GL-4100` exists with type INCOME. **Integration state:** `GL-4100` is `SYNCED`.
 - **Expected:** pending while down, synced after recovery. **Actual:** as expected (`evidence/demo-gl-sync-failures.log`).

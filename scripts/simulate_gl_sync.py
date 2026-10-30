@@ -52,14 +52,14 @@ def main() -> int:
     for code, _ in parallel(TIMES, lambda: call("POST", f"{ERP_URL}/api/accounts", ACCOUNT)):
         print(f"  -> {code}")
 
-    print(f"\nPOST {INTEGRATION_URL}/gl-accounts/sync x{TIMES} (parallel)")
-    for code, body in parallel(TIMES, lambda: call("POST", f"{INTEGRATION_URL}/gl-accounts/sync")):
+    print(f"\nPOST {INTEGRATION_URL}/api/gl-accounts/sync x{TIMES} (parallel)")
+    for code, body in parallel(TIMES, lambda: call("POST", f"{INTEGRATION_URL}/api/gl-accounts/sync")):
         mine = [row for row in body or [] if row["external_reference"] == reference] if code == 200 else body
         print(f"  -> {code} {json.dumps(mine)}")
 
     _, erp_accounts = call("GET", f"{ERP_URL}/api/accounts")
     _, fineract_accounts = call("GET", f"{FINERACT_URL}/glaccounts", fineract=True)
-    _, sync_rows = call("GET", f"{INTEGRATION_URL}/gl-accounts")
+    _, sync_rows = call("GET", f"{INTEGRATION_URL}/api/gl-accounts")
 
     counts = {
         "ERP accounts": sum(1 for a in erp_accounts if a["external_reference"] == reference),

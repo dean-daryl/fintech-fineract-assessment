@@ -24,6 +24,8 @@ from app.services.recovery import run_recovery
 
 log = logging.getLogger(__name__)
 
+API_PREFIX = "/api"
+
 
 async def _recovery_loop(
     gl_sync: GLSyncService,
@@ -73,9 +75,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(title="Integration Service", lifespan=lifespan)
-app.include_router(gl_accounts_router)
-app.include_router(clients_router)
-app.include_router(loans_router)
+app.include_router(gl_accounts_router, prefix=API_PREFIX)
+app.include_router(clients_router, prefix=API_PREFIX)
+app.include_router(loans_router, prefix=API_PREFIX)
 app.include_router(admin_router)
 
 

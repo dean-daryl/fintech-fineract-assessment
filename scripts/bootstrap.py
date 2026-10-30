@@ -277,10 +277,10 @@ def ensure_gl_accounts() -> dict[str, int]:
             raise BootstrapError(f"ERP account {reference} -> {status}: {json.dumps(payload)}")
         report(f"ERP account {reference} {account['name']!r}", "created" if status == 201 else "exists, unchanged")
 
-    status, payload = call("POST", f"{INTEGRATION_URL}/gl-accounts/sync")
+    status, payload = call("POST", f"{INTEGRATION_URL}/api/gl-accounts/sync")
     if status != 200:
         raise BootstrapError(f"GL sync -> {status}: {json.dumps(payload)}")
-    status, rows = call("GET", f"{INTEGRATION_URL}/gl-accounts")
+    status, rows = call("GET", f"{INTEGRATION_URL}/api/gl-accounts")
     by_reference = {row["external_reference"]: row for row in rows}
 
     ids: dict[str, int] = {}

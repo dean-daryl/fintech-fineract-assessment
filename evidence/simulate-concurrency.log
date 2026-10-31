@@ -1,0 +1,107 @@
+Run 443936: Part I duplicates and concurrency, references prefixed SIMC-443936
+
+Setup: one client and three approved loans (one disbursement per loan is the invariant, so each disbursement scenario needs its own loan)
+  POST /api/clients -> 201 {"external_reference": "SIMC-443936-CLIENT", "client_uid": "SME-443936", "name": "Concurrency Traders 443936 Ltd", "operation_status": "COMPLETED"}
+  [PASS] client created (201)
+  [PASS] loan I1: application created (201)
+  [PASS] loan I1: approved (201)
+  loan I1 = LN-2026-000013, principal 5000000 RWF, approved
+  [PASS] loan I2A: application created (201)
+  [PASS] loan I2A: approved (201)
+  loan I2A = LN-2026-000014, principal 5000000 RWF, approved
+  [PASS] loan I2B: application created (201)
+  [PASS] loan I2B: approved (201)
+  loan I2B = LN-2026-000015, principal 5000000 RWF, approved
+
+I1. The same disbursement sent 4 times in a row (loan LN-2026-000013)
+  POST /api/loans/LN-2026-000013/disbursement {"external_reference": "SIMC-443936-I1-DISBURSE", "disbursed_on_date": "2026-04-01"} x4 -> [201, 200, 200, 200]
+  first response -> 201 {"external_reference": "SIMC-443936-I1-DISBURSE", "loan_reference": "LN-2026-000013", "operation_status": "COMPLETED", "amount": 5000000, "interest_portion": 0, "transaction_date": "2026-04-01", "outstanding_after": 5000000, "principal_portion": 0, "erp_transaction_id": "JE-000051"}
+  [PASS] one 201 then three 200
+  [PASS] the three replays return the original body
+
+  Counts
+    Requests received:          4
+    Fineract disbursements:     1 ['SIMC-443936-I1-DISBURSE']
+    ERP journal entries:        1
+    Integration transactions:   1 completed (operations rows by status: {'COMPLETED': 1})
+  Fineract loan: status 'Active', principalOutstanding 5000000, interestOutstanding 500799, totalOutstanding 5500799
+  [PASS] Fineract disbursements: 1
+  [PASS] ERP journal entries: 1
+  [PASS] Integration transactions: 1 (one operations row, COMPLETED)
+
+I2a. 10 simultaneous disbursements, same external_reference (loan LN-2026-000014)
+  -> status codes [201, 202, 202, 202, 202, 202, 202, 202, 202, 202]
+  [PASS] exactly one 201; the other 9 are 202 (in progress) or 200 (finished replay)
+  [PASS] no request was rejected or errored
+  same request after the burst -> 200 {"amount": 5000000, "loan_reference": "LN-2026-000014", "interest_portion": 0, "operation_status": "COMPLETED", "transaction_date": "2026-04-01", "outstanding_after": 5000000, "principal_portion": 0, "erp_transaction_id": "JE-000052", "external_reference": "SIMC-443936-I2A-DISBURSE"}
+  [PASS] a replay after the burst returns 200 with the original result
+
+  Counts
+    Requests received:          10
+    Fineract disbursements:     1 ['SIMC-443936-I2A-DISBURSE']
+    ERP journal entries:        1
+    Integration transactions:   1 completed (operations rows by status: {'COMPLETED': 1})
+  Fineract loan: status 'Active', principalOutstanding 5000000, interestOutstanding 500799, totalOutstanding 5500799
+  [PASS] Fineract disbursements: 1
+  [PASS] ERP journal entries: 1
+  [PASS] Integration transactions: 1 (the unique (operation_type, external_reference) allows one row)
+
+I2b. 10 simultaneous disbursements, each with a different external_reference (loan LN-2026-000015)
+  -> status codes [201, 409, 409, 409, 409, 409, 409, 409, 409, 409]
+  winner -> 201 {"external_reference": "SIMC-443936-I2B-DISBURSE-2", "loan_reference": "LN-2026-000015", "operation_status": "COMPLETED", "amount": 5000000, "interest_portion": 0, "transaction_date": "2026-04-01", "outstanding_after": 5000000, "principal_portion": 0, "erp_transaction_id": "JE-000053"}
+  a loser -> 409 {"external_reference": "SIMC-443936-I2B-DISBURSE-0", "loan_reference": "LN-2026-000015", "operation_status": "FAILED", "error": "loan LN-2026-000015 is already disbursed or being disbursed by another request"}
+  [PASS] exactly one 201, the other 9 are 409
+
+  Counts
+    Requests received:          10
+    Fineract disbursements:     1 ['SIMC-443936-I2B-DISBURSE-2']
+    ERP journal entries:        1
+    Integration transactions:   1 completed (operations rows by status: {'COMPLETED': 1, 'FAILED': 9})
+  Fineract loan: status 'Active', principalOutstanding 5000000, interestOutstanding 500799, totalOutstanding 5500799
+  [PASS] Fineract disbursements: 1
+  [PASS] the Fineract disbursement carries the winner's reference
+  [PASS] ERP journal entries: 1
+  [PASS] Integration transactions: 1 COMPLETED; the 9 rejected requests are recorded as FAILED and never reached Fineract
+
+I3. 10 repayments with different references, each sent 3 times, all 30 at once (loan LN-2026-000013)
+  Fineract before: status 'Active', principalOutstanding 5000000, interestOutstanding 500799, totalOutstanding 5500799
+  -> status codes [201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 202, 202, 202, 202, 202, 202, 202, 202, 202, 202, 202, 202, 202, 202, 202, 202, 202, 202, 202, 202]
+  [PASS] no request was rejected or errored (only 200, 201 or 202)
+  [PASS] at most one 201 per reference (10 in total)
+
+  Each reference after the burst (replayed until finished):
+    SIMC-443936-I3-REPAY-0: 200 COMPLETED principal 36588 interest 63412 erp JE-000063
+    SIMC-443936-I3-REPAY-1: 200 COMPLETED principal 100000 interest 0 erp JE-000055
+    SIMC-443936-I3-REPAY-2: 200 COMPLETED principal 100000 interest 0 erp JE-000061
+    SIMC-443936-I3-REPAY-3: 200 COMPLETED principal 100000 interest 0 erp JE-000060
+    SIMC-443936-I3-REPAY-4: 200 COMPLETED principal 72351 interest 27649 erp JE-000059
+    SIMC-443936-I3-REPAY-5: 200 COMPLETED principal 100000 interest 0 erp JE-000057
+    SIMC-443936-I3-REPAY-6: 200 COMPLETED principal 100000 interest 0 erp JE-000056
+    SIMC-443936-I3-REPAY-7: 200 COMPLETED principal 58400 interest 41600 erp JE-000058
+    SIMC-443936-I3-REPAY-8: 200 COMPLETED principal 100000 interest 0 erp JE-000062
+    SIMC-443936-I3-REPAY-9: 200 COMPLETED principal 25000 interest 75000 erp JE-000054
+  [PASS] every reference finished COMPLETED
+  Fineract after: status 'Active', principalOutstanding 4207661, interestOutstanding 293138, totalOutstanding 4500799
+  Fineract repayments per reference: {'SIMC-443936-I3-REPAY-0': 1, 'SIMC-443936-I3-REPAY-1': 1, 'SIMC-443936-I3-REPAY-2': 1, 'SIMC-443936-I3-REPAY-3': 1, 'SIMC-443936-I3-REPAY-4': 1, 'SIMC-443936-I3-REPAY-5': 1, 'SIMC-443936-I3-REPAY-6': 1, 'SIMC-443936-I3-REPAY-7': 1, 'SIMC-443936-I3-REPAY-8': 1, 'SIMC-443936-I3-REPAY-9': 1}
+  [PASS] Fineract: each of the 10 references applied exactly once
+  [PASS] Fineract: no extra repayment from the 20 duplicates
+  Fineract's breakdown of the 10 repayments: amount 1000000, principal 792339, interest 207661
+  totalOutstanding     5500799 - 1000000 = 4500799; Fineract says 4500799
+  principalOutstanding 5000000 - 792339 = 4207661; Fineract says 4207661
+  interestOutstanding  500799 - 207661 = 293138; Fineract says 293138
+  [PASS] each repayment's principal + interest equals its amount (Fineract's split)
+  [PASS] final totalOutstanding = initial - Fineract's recorded amounts
+  [PASS] final principalOutstanding = initial - Fineract's principal portions
+  [PASS] final interestOutstanding = initial - Fineract's interest portions
+  [PASS] our responses carry Fineract's portions
+
+  Counts
+    Requests received:          30 (10 references x 3)
+    Fineract repayments:        10
+    ERP journal entries:        10
+    Integration transactions:   10 completed (operations rows by status: {'COMPLETED': 10})
+    Fineract concurrency 409s retried by the service: 2 (Fineract rolled each back, so each was resent)
+  [PASS] ERP journal entries: 10
+  [PASS] Integration transactions: 10, all COMPLETED
+
+35/35 checks passed

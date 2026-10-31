@@ -44,6 +44,16 @@ class FineractRejectedError(FineractError):
         super().__init__(f"Fineract returned {status_code}: {top_level_code or body}")
 
 
+FINERACT_LOAN_LOCKED = "error.msg.loan.locked"
+
+
+def is_concurrent_modification(status_code: int, code: str | None) -> bool:
+    """Fineract rolled the command back because another write won the race; nothing was applied."""
+    if status_code != 409 or code is None:
+        return False
+    return code == FINERACT_LOAN_LOCKED or (code.startswith("error.msg.platform.service.") and code.endswith(".conflict"))
+
+
 class FineractClient:
     def __init__(
         self,
@@ -163,5 +173,8 @@ class FineractClient:
                 error_body: dict[str, Any] | str = response.json()
             except ValueError:
                 error_body = response.text
-            raise FineractRejectedError(response.status_code, error_body)
+            rejected = FineractRejectedError(response.status_code, error_body)
+            if is_concurrent_modification(rejected.status_code, rejected.code):
+                raise FineractUnavailableError(f"{method} {path}: HTTP 409 {rejected.code}") from rejected
+            raise rejected
         return response

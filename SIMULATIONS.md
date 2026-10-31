@@ -101,6 +101,60 @@ Every scenario is re-runnable against a running stack (`make up`). Logs are in `
 - **ERP state:** two `SIM-ERP-` entries per run; balances unchanged overall. **Fineract / integration state:** not involved.
 - **Explanation:** the unique constraint on `journal_entries.external_reference` decides which concurrent request inserts; the others read the stored entry and compare the request hash. Invalid entries fail validation before anything is written.
 
+## Part I evidence at a glance
+
+All four scenarios run with `make simulate-concurrency` against the running stack. Evidence: `evidence/simulate-concurrency.log`, **35/35 checks PASS**. Every parallel batch is sent by a real thread pool, and each thread waits on a barrier so all the requests leave at once. Counts come straight from each system: Fineract's loan transactions, `count(*)` on the ERP's `journal_entries`, and `count(*)` by status on the integration service's `operations`. How the layers work together: DECISIONS.md D-026.
+
+| # | Scenario | Loan | Log lines |
+|---|---|---|---|
+| S-I1 | Same disbursement sent 4 times in a row | `LN-2026-000013` | 16–30 |
+| S-I2a | 10 simultaneous disbursements, same reference | `LN-2026-000014` | 32–47 |
+| S-I2b | 10 simultaneous disbursements, different references | `LN-2026-000015` | 49–64 |
+| S-I3 | 10 repayment references × 3 copies, 30 at once | `LN-2026-000013` | 66–105 |
+
+## S-I1: Sequential duplicate disbursement
+
+- **Initial state:** approved loan `LN-2026-000013`, nothing disbursed.
+- **Request:** `POST /api/loans/LN-2026-000013/disbursement` with `SIMC-443936-I1-DISBURSE`, 4 times in a row.
+- **Response:** `[201, 200, 200, 200]`; the three replays return the first body exactly.
+- **Fineract state:** one disbursement, `externalId` `SIMC-443936-I1-DISBURSE`; status Active, outstanding 5,500,799.
+- **ERP state:** 1 journal entry. **Integration state:** 1 operations row, `COMPLETED`.
+- **Expected:** requests 4, Fineract disbursements 1, ERP entries 1, integration transactions 1.
+- **Actual:** exactly that (lines 22–26).
+- **Explanation:** the second request hits the unique `(operation_type, external_reference)` constraint, finds a finished operation with the same payload hash, and replays the stored response. It never reaches Fineract or the ERP.
+
+## S-I2a: Concurrent disbursements, same reference
+
+- **Initial state:** approved loan `LN-2026-000014`.
+- **Request:** 10 simultaneous `POST .../disbursement` with `SIMC-443936-I2A-DISBURSE`.
+- **Response:** `[201, 202 ×9]`. One request inserts the operation and runs it; the other nine find it in progress and get 202 with its current status. The same request afterwards gets 200 with the original result.
+- **Fineract state:** one disbursement. **ERP state:** 1 entry. **Integration state:** 1 operations row, `COMPLETED`.
+- **Expected:** exactly one disbursement in every system; no request rejected.
+- **Actual:** exactly that (lines 33–47).
+- **Explanation:** the unique constraint lets only one `INSERT` succeed. The losers read the existing row instead of executing.
+
+## S-I2b: Concurrent disbursements, different references
+
+- **Initial state:** approved loan `LN-2026-000015`.
+- **Request:** 10 simultaneous `POST .../disbursement`, references `SIMC-443936-I2B-DISBURSE-0` to `-9`.
+- **Response:** `[201, 409 ×9]`. Each 409 says the loan "is already disbursed or being disbursed by another request".
+- **Fineract state:** one disbursement, carrying the winner's reference (`-2`). **ERP state:** 1 entry. **Integration state:** 10 operations rows: 1 `COMPLETED`, 9 `FAILED`. The nine never reached Fineract.
+- **Expected:** exactly one disbursement in Fineract and in the ERP.
+- **Actual:** exactly that (lines 50–64).
+- **Explanation:** the references differ, so the idempotency constraint lets all ten in. Next, each request locks the `loan_map` row (`SELECT ... FOR UPDATE`) and tries to claim the loan's single `loan_disbursement` slot (primary key `loan_reference`). One claims it; the other nine see a slot owned by a live operation and are rejected before any Fineract call. If those two guards failed, Fineract's loan state would still refuse a second disbursement of an Active loan (D-026).
+
+## S-I3: Concurrent repayments with duplicates
+
+- **Initial state:** loan `LN-2026-000013` (disbursed in S-I1), Fineract total outstanding 5,500,799 (principal 5,000,000, interest 500,799).
+- **Request:** 10 references `SIMC-443936-I3-REPAY-0` to `-9`, 100,000 RWF each on 2026-05-01. Each is sent 3 times, and all 30 requests leave together.
+- **Response:** `[201 ×10, 202 ×20]`: one 201 per reference; the 20 duplicates found their reference in progress. Replaying each reference afterwards returns 200 `COMPLETED`.
+- **Fineract state:** exactly one repayment per reference, 10 in total. Fineract split them unevenly (e.g. `REPAY-9` 25,000 principal / 75,000 interest, `REPAY-1` 100,000 / 0) because it allocates each one against the schedule in the order it booked them. Fineract recorded 1,000,000 in total: 792,339 principal and 207,661 interest.
+- **Balances:** total 5,500,799 − 1,000,000 = 4,500,799; principal 5,000,000 − 792,339 = 4,207,661; interest 500,799 − 207,661 = 293,138. Each matches Fineract's own summary (lines 89–91). The subtractions use Fineract's recorded portions, not the amounts the test sent.
+- **ERP state:** 10 entries, each with Fineract's split. **Integration state:** 10 operations rows, all `COMPLETED`.
+- **Expected:** each reference applied once; the duplicates applied nothing; balances moved by exactly Fineract's breakdown.
+- **Actual:** exactly that. During this run Fineract answered 2 of the repayment calls with a concurrency 409 (it had rolled each back); the service resent them and each landed once (line 101).
+- **Explanation:** duplicates are stopped by the idempotency constraint, as in S-I2a. Different references are meant to all apply, so there is no per-loan slot. Concurrent writes to one loan are serialised by Fineract's optimistic locking. When Fineract's own retries run out it returns 409 `error.msg.platform.service.*.conflict`, and the service now treats that as retryable rather than as a rejection (D-026). The first run of this simulation, before that fix, failed: 6 of the 10 references ended `FAILED` with 422. Fineract and the ERP still agreed on the 4 that applied.
+
 ## Part J evidence at a glance
 
 All five scenarios run on one loan with `make simulate-failures` (needs `FAULT_INJECTION_ENABLED=true` in `.env`). Evidence: `evidence/simulate-failures.log`, **52/52 checks PASS**. For every scenario the log prints our operation (`GET /admin/operations/{ref}`), Fineract's transactions with that `externalId`, and the ERP entry plus a `count(*)` straight from the ERP database, before, during and after recovery. How faults are injected: DECISIONS.md D-023.

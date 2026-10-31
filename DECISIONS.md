@@ -594,3 +594,30 @@ If Fineract reprocesses later repayments after a reversal and changes their spli
 - Both sides are read in full on every call. That's fine for a chart of accounts, which is small and changes rarely.
 - Fineract's stock `PUT /glaccounts/{id}` can still rename or recode a synced account. The patch does not block it (outside rule 11's scope); this report is how it is detected.
 - Reports are not stored, and nothing runs on a schedule. Each call reads both systems live.
+
+## D-026: Duplicates and concurrency (Part I)
+
+**What stops a second disbursement.** No single layer is enough on its own, so there are five. Each one covers a gap the layer above leaves. Evidence: `make simulate-concurrency`, SIMULATIONS.md S-I1 to S-I3.
+
+| # | Layer | Where | What it stops | Why it is not enough alone |
+|---|---|---|---|---|
+| 1 | API idempotency | `operations` unique `(operation_type, external_reference)` + payload hash (D-014) | The same request twice, sequential or concurrent: one `INSERT` wins, the rest replay (200) or see it in progress (202) | Keyed by reference: two different references for one loan both pass |
+| 2 | Integration-DB constraint | `loan_disbursement` primary key `loan_reference`: one slot per loan (D-017) | Different references disbursing one loan: the second request finds the slot taken and gets 409 before Fineract is called | Only guards calls made through this service, and only while our database is right |
+| 3 | Row lock | `SELECT ... FOR UPDATE` on `loan_map` while claiming the slot | Two requests both reading a free or `FAILED` slot and both taking it over | Same scope as layer 2 |
+| 4 | Fineract `externalId` | Our `external_reference` is the transaction's `externalId`; unique index `m_loan_transaction_external_id_key` | A resend of one reference booking twice in Fineract (e.g. after a timeout) | Keyed by reference again: a different reference is a different `externalId` |
+| 5 | Fineract loan state | `LoanTransactionValidatorImpl` rejects disbursing a single-disbursement loan that is not "approved and not disbursed" | Any second disbursement of the loan, whatever its reference or origin | Gives the caller an error, not a replay. It's a backstop, not the contract |
+
+**The last line of defence is layer 5, Fineract's loan state.** It is the only check that knows whether money went out. It holds even if our database is wrong, restored from a backup, or bypassed, and even if a call comes from somewhere other than this service. Layers 1 to 3 exist so that this backstop is never needed in normal use, and so callers get a clean replay or 409 instead of a Fineract validation error.
+
+**Repayments use layers 1 and 4 only.** Many legitimate repayments can hit one loan, so there is no per-loan slot. Concurrent repayments with different references therefore all reach Fineract at once. Fineract serialises them itself with optimistic locking on the loan and retries the losing command up to 3 times (`fineract.retry.instances.executeCommand`).
+
+**Fineract's concurrency 409 is retryable, not a rejection.** When Fineract's own retries run out, it rolls the command back and returns 409 with code `error.msg.platform.service.<type>.conflict` ("unable to handle the request due to concurrent modification, please try again"). `error.msg.loan.locked` (loan locked by the close-of-business job) has the same meaning. `is_concurrent_modification` in `clients/fineract.py` recognises both, and the client raises `FineractUnavailableError` for them, so the pipeline retries inline with backoff and then defers to the recovery sweep. Every other 4xx stays a `FineractRejectedError`; a business 409 such as `error.msg.glaccount.glcode.conflict` is still a rejection (`tests/test_fineract_errors.py`). Before this change the first run of the I3 simulation failed: 6 of 10 concurrent repayments ended `FAILED` with 422. Nothing was double-booked; they were simply lost.
+
+**Why resending after that 409 needs no lookup first.** Fineract answered, so the outcome is known: the command was rolled back. This matches how `FineractUnavailableError` is already handled, where the request never took effect (`test_unavailable_is_resent_without_look_up`). If that assumption were ever wrong, layer 4 would reject the resend as a duplicate `externalId`, and the pipeline's rejection path looks the reference up before failing (D-023).
+
+**What the simulation counts.** "Integration transactions" in the brief's I1 table is the number of `COMPLETED` operations for the loan. The script also prints every row by status. In I2b the 9 losers are stored as `FAILED` operations with a 409 response, so a repeat of a losing reference replays its 409. They never reached Fineract.
+
+**Known weaknesses.**
+- Fineract can still return a concurrency 409 on every inline and deferred attempt under sustained contention on one loan. The operation then ends `FAILED` (Fineract never applied it) after `operation_max_attempts`, and the partner must resend.
+- The overpayment race in D-017 remains: concurrent repayments that each pass the live balance check can together exceed the balance. The simulation's repayments total 1,000,000 of 5,500,799 outstanding, so they don't exercise it.
+- Retried repayments are applied in whatever order Fineract books them, so the principal/interest split of each one depends on that order (S-I3). The totals are what Fineract's schedule says either way, and the ERP mirrors each transaction's own split.

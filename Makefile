@@ -9,7 +9,7 @@ FINERACT_TAG := $(shell sed -n 's/^ARG FINERACT_TAG=//p' fineract-customization/
 PATCH_DIR := $(CURDIR)/fineract-customization/patch
 JAVA_HOME_25 ?= $(shell /usr/libexec/java_home -v 25 2>/dev/null)
 
-.PHONY: build-fineract patches up down reset logs ps bootstrap verify-fineract-setup evidence-bootstrap simulate-gl-sync simulate-erp simulate-loan-lifecycle simulate-failures simulate-reconciliation simulate-gl-reconciliation demo-fineract-gl evidence-compose-up test-java test-python lint
+.PHONY: build-fineract patches up down reset logs ps bootstrap verify-fineract-setup evidence-bootstrap simulate-gl-sync simulate-erp simulate-loan-lifecycle simulate-concurrency simulate-failures simulate-reconciliation simulate-gl-reconciliation demo-fineract-gl evidence-compose-up test-java test-python lint
 
 # Builds what changed and waits until every service reports healthy.
 # Fineract is built through build-fineract (same builder and cache as before), not
@@ -79,6 +79,10 @@ simulate-erp:
 # Needs FINERACT_API_* from .env: Fineract's state after each stage is read directly from Fineract.
 simulate-loan-lifecycle:
 	set -o pipefail; set -a; . ./.env; set +a; python3 scripts/simulate_loan_lifecycle.py 2>&1 | tee evidence/simulate-loan-lifecycle.log
+
+# Part I: duplicate and concurrent disbursements and repayments; counts rows in the ERP and integration databases.
+simulate-concurrency:
+	set -o pipefail; set -a; . ./.env; set +a; python3 scripts/simulate_concurrency.py 2>&1 | tee evidence/simulate-concurrency.log
 
 # Part J: needs FAULT_INJECTION_ENABLED=true (in .env) on the integration service, and stops/starts mock-erp itself.
 simulate-failures:

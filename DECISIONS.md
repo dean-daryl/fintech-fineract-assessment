@@ -179,7 +179,7 @@ Permissions: exactly what the integration service needs for Parts A to D, and no
 | `READ_GLACCOUNT`, `SYNC_GLACCOUNT` | GL sync and lookup by reference (Part A) |
 | `READ_OFFICE` | Find Kigali Main Office by name for new clients |
 | `READ_LOANPRODUCT` | Find SME Asset Finance by short name |
-| `CREATE_CLIENT`, `READ_CLIENT` | Partner client onboarding, lookup by external id |
+| `CREATE_CLIENT`, `ACTIVATE_CLIENT`, `READ_CLIENT` | Partner client onboarding, lookup by external id. Clients are created active (`active=true`), and Fineract checks `ACTIVATE_CLIENT` for that on top of `CREATE_CLIENT` |
 | `CREATE_LOAN`, `APPROVE_LOAN`, `DISBURSE_LOAN`, `REPAYMENT_LOAN`, `READ_LOAN` | Loan lifecycle and live status |
 | `READ_JOURNALENTRY` | Reconciliation against Fineract's journal entries |
 

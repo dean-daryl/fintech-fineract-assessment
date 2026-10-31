@@ -42,6 +42,7 @@ ROLE_PERMISSIONS = frozenset(
         "SYNC_GLACCOUNT",
         "READ_LOANPRODUCT",
         "CREATE_CLIENT",
+        "ACTIVATE_CLIENT",
         "READ_CLIENT",
         "CREATE_LOAN",
         "APPROVE_LOAN",

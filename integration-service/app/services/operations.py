@@ -134,6 +134,10 @@ class OperationStore:
                 )
             ).first()
 
+    def find_by_reference(self, external_reference: str) -> list[Operation]:
+        with self._sessions() as session:
+            return list(session.scalars(select(Operation).where(Operation.external_reference == external_reference).order_by(Operation.id)))
+
     @staticmethod
     def _log_fields(row: Operation) -> dict[str, Any]:
         return {"external_reference": row.external_reference, "erp_transaction_id": row.erp_transaction_id, "status": row.status}

@@ -100,3 +100,55 @@ Every scenario is re-runnable against a running stack (`make up`). Logs are in `
 - **Actual:** not yet captured on the compose stack. To be recorded in `evidence/simulate-erp.log`.
 - **ERP state:** two `SIM-ERP-` entries per run; balances unchanged overall. **Fineract / integration state:** not involved.
 - **Explanation:** the unique constraint on `journal_entries.external_reference` decides which concurrent request inserts; the others read the stored entry and compare the request hash. Invalid entries fail validation before anything is written.
+
+## Part J evidence at a glance
+
+All five scenarios run on one loan with `make simulate-failures` (needs `FAULT_INJECTION_ENABLED=true` in `.env`). Evidence: `evidence/simulate-failures.log`, **52/52 checks PASS**. For every scenario the log prints our operation (`GET /admin/operations/{ref}`), Fineract's transactions with that `externalId`, and the ERP entry plus a `count(*)` straight from the ERP database, before, during and after recovery. How faults are injected: DECISIONS.md D-023.
+
+| # | Scenario | How the failure is produced | Log lines |
+|---|---|---|---|
+| S-J1 | ERP down after Fineract success | `docker compose stop mock-erp` (real outage) | 9–40 |
+| S-J2 | Fineract down | `FINERACT_DOWN` fault, before any Fineract call | 42–71 |
+| S-J3 | Fineract timeout after sending | `FINERACT_TIMEOUT_AFTER_SEND` fault, after Fineract booked it | 73–104 |
+| S-J4 | ERP timeout after the entry was written | `ERP_TIMEOUT_AFTER_WRITE` fault, after the ERP stored it | 106–140 |
+| S-J5 | Crash between Fineract success and the ERP call | `CRASH_BEFORE_ERP` fault: `os._exit(1)`, Docker restarts the container | 142–168 |
+
+## S-J1: ERP down after Fineract success
+
+- **Initial state:** approved loan `LN-2026-000005`; no operation, Fineract transaction or ERP entry for `SIMF-432922-S1-DISBURSE`.
+- **Request:** stop `mock-erp`, then `POST /api/loans/{ref}/disbursement`.
+- **During:** the caller gets **202** with `operation_status: ERP_PENDING` and Fineract's result (5,000,000 disbursed). The operation is `ERP_PENDING`, attempts 1, `last_error` the connection error. Fineract has one disbursement; the ERP database has 0 rows. The same request again gets 202 and Fineract still has one disbursement. `POST /admin/recover` while the ERP is down leaves it `ERP_PENDING`.
+- **After:** start `mock-erp`; `POST /admin/recover` finishes it in 4 s. `COMPLETED`, `JE-000017` = Dr 1200 / Cr 1100 5,000,000, one row; 1200 moved by 5,000,000 once. The same request again gets 200 with `JE-000017` and still one row.
+- **The brief's questions.** *Status?* `ERP_PENDING`, reported to the caller as 202. *Retried?* Yes: 3 inline attempts, then deferred retries with backoff (5 s, 10 s, … 5 min) from the sweep, up to 10; then `NEEDS_RECONCILIATION`, never `FAILED` (not exercised by this run; unit test `test_erp_attempts_start_from_zero_and_end_in_reconciliation`). *How does the ERP catch up?* The entry was saved at `FINERACT_DONE` (D-022); the sweep looks it up by reference, then posts exactly those bytes. *Double posting?* The lookup first; the saved request makes any resend identical; the ERP's unique `external_reference` stores it once.
+
+## S-J2: Fineract down
+
+- **Initial state:** no operation, Fineract transaction or ERP entry for `SIMF-432922-S2-REPAY`.
+- **Request:** arm `FINERACT_DOWN`, then `POST /api/loans/{ref}/repayments` for 500,000.
+- **During:** the caller gets **202** with `operation_status: RECEIVED`. Persisted: the operation row (payload, hash, `RECEIVED`, attempts 1, `last_error` "injected fault: Fineract is down"). Nothing in Fineract, nothing in the ERP. The same request again gets 202 and nothing executes; the same reference with another amount gets 409. A recovery pass 6 s later retries (attempts 2) and still finds Fineract down.
+- **After:** clear the fault; recovery finishes it in 11 s. `COMPLETED`; one Fineract repayment (383,400 principal, 116,600 interest); `JE-000018` with those lines, one row.
+- **The brief's questions.** *What does the caller get?* 202 and the operation status, not an error: the request is accepted and will be retried. *Is anything persisted?* Only our operation row; nothing reached Fineract or the ERP. *Safe to retry?* Yes, with the same `external_reference` and payload: it replays (202 now, the stored result later) and never executes twice. If Fineract stays down for all 10 attempts, the operation ends `FAILED` with 503, which means nothing happened (not exercised by this run; unit test `test_fineract_down_on_every_attempt_fails_with_503_and_nothing_sent`).
+
+## S-J3: Fineract timeout after sending
+
+- **Initial state:** no operation, Fineract transaction or ERP entry for `SIMF-432922-S3-REPAY`.
+- **Request:** arm `FINERACT_TIMEOUT_AFTER_SEND`, then the repayment.
+- **During** (the service log of this request, by correlation id): one `POST .../transactions?command=repayment`, then `Fault fired` and `Fineract attempt failed`, then `GET .../transactions/external-id/SIMF-432922-S3-REPAY` returning 200, and no second POST. (The GET before the fault is `execute` reading back the transaction it created; the fault throws that answer away.)
+- **After:** the caller gets **201** with Fineract's split. One Fineract repayment; `JE-000019`, one row.
+- **The brief's question.** *How do you know whether it succeeded?* Our `external_reference` is sent as the transaction's `externalId`. After a timeout the pipeline never resends: it looks the transaction up by that id (`/loans/external-id/{loan}/transactions/external-id/{ref}`). Found: done. Not found: safe to send. Lookup fails too: retry later, and after the last attempt `NEEDS_RECONCILIATION` (unit test `test_last_attempt_with_unknown_outcome_needs_reconciliation`; this run shows the found case). Fineract's unique index on `externalId` is the guard behind it.
+
+## S-J4: ERP timeout after the entry was written
+
+- **Initial state:** no operation, Fineract transaction or ERP entry for `SIMF-432922-S4-REPAY`.
+- **Request:** arm `ERP_TIMEOUT_AFTER_WRITE`, then the repayment.
+- **During** (service log): `POST .../api/journal-entries` returning 201 Created, then `Fault fired` and `ERP attempt failed`, then `GET .../api/journal-entries/SIMF-432922-S4-REPAY` returning 200. No second POST.
+- **After:** **201**; `JE-000020`; ERP row count **1**; 1100 moved by 500,000 once. A blind resend of the same entry straight to the ERP gets 200 with `JE-000020`. The partner repeating the request gets 200 with `JE-000020`. Still one row.
+- **The brief's questions.** *What happens on retry?* The next attempt looks the entry up by reference and finds it, so nothing is posted again. Even a resend would be byte-identical and get the stored entry back. *Prove one journal entry exists:* `count(*) = 1` from the ERP database, and the balance moved once. (The blind resend's insert hit the unique constraint and rolled back. That still used a database sequence number, which is why the next entry in S-J5 is `JE-000022`, not `JE-000021`.)
+
+## S-J5: Crash between Fineract success and the ERP call
+
+- **Initial state:** no operation, Fineract transaction or ERP entry for `SIMF-432922-S5-REPAY`; container restart count 1 (from the previous run).
+- **Request:** arm `CRASH_BEFORE_ERP`, then the repayment. The process exits after `ERP_PENDING` is saved and before the ERP is called.
+- **During:** the caller's connection drops (`RemoteDisconnected`). Docker restarts the container (restart count 1 → 2) and it is healthy 2 s later. Right after the restart: operation `ERP_PENDING`, Fineract has the repayment (448,527 principal, 51,473 interest), the ERP has 0 rows.
+- **After:** with no manual action, the in-process recovery sweep completes it 59 s later, once the request's 60 s lease has expired: `COMPLETED`, `JE-000022` with Fineract's lines, one row.
+- **The brief's question.** *How is it recovered on restart?* State is saved before each call to the next system (rule 8), so the restart finds the operation in `ERP_PENDING` with its journal entry already saved. The recovery sweep runs at startup and every 30 s, and claims due rows whose lease has expired (`FOR UPDATE SKIP LOCKED`). It looks the entry up by reference (not found here), posts it, and completes the operation. A crash one step earlier, between Fineract and `FINERACT_DONE`, leaves `FINERACT_PENDING`; recovery then looks the Fineract transaction up by `externalId` before doing anything (D-014). Both crash points are also unit-tested (`tests/test_pipeline.py`).

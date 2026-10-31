@@ -76,6 +76,10 @@ services:
       # Fineract's image ships a self-signed certificate (see DECISIONS.md D-008)
       FINERACT_TLS_VERIFY: "false"
       ERP_BASE_URL: http://mock-erp:8000
+      # Test-only failure injection for the Part J scenarios (DECISIONS.md D-023); off unless .env turns it on
+      FAULT_INJECTION_ENABLED: ${FAULT_INJECTION_ENABLED:-false}
+    # An injected crash really exits the process; the restart brings it back and the recovery sweep resumes
+    restart: unless-stopped
     ports:
       - "8000:8000"
     depends_on:

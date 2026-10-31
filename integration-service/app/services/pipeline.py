@@ -11,6 +11,7 @@ from app.domain.accounting import AccountingMappingError, JournalEntry, to_erp_j
 from app.domain.idempotency import ReplayKind, payload_hash, replay_kind
 from app.domain.loans import FineractLoanTransaction
 from app.domain.states import OperationStatus, OperationType, has_erp_step
+from app.faults import FaultInjector, FaultPoint
 from app.models import Operation
 from app.services.operations import OperationStore
 
@@ -66,10 +67,11 @@ def rejection_status_code(status_code: int, code: str | None) -> int:
 
 
 class OperationPipeline:
-    def __init__(self, store: OperationStore, erp: ErpClient, settings: Settings) -> None:
+    def __init__(self, store: OperationStore, erp: ErpClient, settings: Settings, faults: FaultInjector | None = None) -> None:
         self._store = store
         self._erp = erp
         self._settings = settings
+        self._faults = faults or FaultInjector(enabled=False)
 
     def submit(self, handler: OperationHandler, external_reference: str, payload: dict[str, Any]) -> OperationResult:
         claim = self._store.claim(handler.operation_type, external_reference, payload)
@@ -107,6 +109,8 @@ class OperationPipeline:
 
         if status is OperationStatus.RECEIVED:
             try:
+                if self._faults.fires(FaultPoint.FINERACT_DOWN, operation.external_reference):
+                    raise FineractUnavailableError("injected fault: Fineract is down")
                 handler.prepare(operation)
             except OperationRejected as exc:
                 return self._fail(handler, operation, exc.status_code, str(exc))
@@ -141,7 +145,10 @@ class OperationPipeline:
                     existing = handler.look_up(operation)
                     if existing is not None:
                         return existing
-                return handler.execute(operation)
+                outcome = handler.execute(operation)
+                if self._faults.fires(FaultPoint.FINERACT_TIMEOUT_AFTER_SEND, operation.external_reference):
+                    raise FineractTimeoutError("injected fault: the response was lost after Fineract accepted the request")
+                return outcome
             except FineractUnavailableError as exc:
                 last_error = exc
             except FineractTimeoutError as exc:
@@ -217,6 +224,7 @@ class OperationPipeline:
             look_up_first = status is OperationStatus.ERP_PENDING
             if status is OperationStatus.FINERACT_DONE:
                 operation = self._store.transition(operation.id, OperationStatus.ERP_PENDING, reset_attempts=True)
+                self._faults.crash_if_armed(operation.external_reference)
             return self._post_to_erp(handler, operation, look_up_first)
         body = {**self._body(handler, operation, OperationStatus.COMPLETED), **(operation.response or {})}
         self._store.transition(operation.id, OperationStatus.COMPLETED, response_code=201, response=body)
@@ -259,7 +267,10 @@ class OperationPipeline:
                     existing = self._erp.find_journal_entry(request["external_reference"])
                     if existing is not None:
                         return existing
-                return self._erp.post_journal_entry(request)
+                entry = self._erp.post_journal_entry(request)
+                if self._faults.fires(FaultPoint.ERP_TIMEOUT_AFTER_WRITE, operation.external_reference):
+                    raise ErpTimeoutError("injected fault: the response was lost after the ERP wrote the entry")
+                return entry
             except ErpUnavailableError as exc:
                 last_error = exc
             except ErpTimeoutError as exc:

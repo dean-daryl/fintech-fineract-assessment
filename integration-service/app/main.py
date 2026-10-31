@@ -14,6 +14,7 @@ from app.clients.erp import ErpClient
 from app.clients.fineract import FineractClient
 from app.config import get_settings
 from app.db import Base, SessionLocal, engine
+from app.faults import FaultInjector
 from app.logs import configure_logging, correlation_id
 from app.services.clients import ClientCreation, ClientService
 from app.services.gl_sync import GLSyncService
@@ -58,11 +59,15 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         timeout_seconds=settings.fineract_timeout_seconds,
     )
     erp = ErpClient(settings.erp_base_url, settings.erp_timeout_seconds)
-    pipeline = OperationPipeline(OperationStore(SessionLocal, settings.operation_lease_seconds), erp, settings)
+    store = OperationStore(SessionLocal, settings.operation_lease_seconds)
+    faults = FaultInjector(settings.fault_injection_enabled)
+    pipeline = OperationPipeline(store, erp, settings, faults)
     app.state.gl_sync = GLSyncService(SessionLocal, erp, fineract, pipeline, settings)
     clients = ClientService(pipeline, ClientCreation(SessionLocal, fineract, settings), fineract)
     loans = LoanService(SessionLocal, pipeline, fineract, settings)
     app.state.pipeline = pipeline
+    app.state.store = store
+    app.state.faults = faults
     app.state.clients = clients
     app.state.loans = loans
     app.state.handlers = [*app.state.gl_sync.handlers, *clients.handlers, *loans.handlers]

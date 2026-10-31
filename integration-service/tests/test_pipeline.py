@@ -10,6 +10,7 @@ from app.config import Settings
 from app.domain.accounting import AccountingMappingError, JournalEntry, JournalLine, to_erp_journal_entry
 from app.domain.idempotency import payload_hash
 from app.domain.states import OperationStatus, OperationType, check_transition, is_finished
+from app.faults import FaultInjector, FaultPoint
 from app.models import Operation
 from app.services.operations import Claim
 from app.services.pipeline import FineractOutcome, OperationPipeline, OperationRejected, rejection_status_code
@@ -147,7 +148,7 @@ DONE = FineractOutcome(31, {"principal_portion": 383403, "interest_portion": 750
 PAYLOAD = {"loan_reference": "LN-2026-000001", "amount": 458403}
 
 
-def _pipeline(erp: FakeErp | None = None, **settings: Any) -> tuple[OperationPipeline, FakeStore]:
+def _pipeline(erp: FakeErp | None = None, faults: FaultInjector | None = None, **settings: Any) -> tuple[OperationPipeline, FakeStore]:
     store = FakeStore()
     config = Settings(
         database_url="x",
@@ -157,7 +158,7 @@ def _pipeline(erp: FakeErp | None = None, **settings: Any) -> tuple[OperationPip
         fineract_password="x",
         **settings,
     )
-    return OperationPipeline(store, erp or FakeErp(), config), store  # type: ignore[arg-type]
+    return OperationPipeline(store, erp or FakeErp(), config, faults), store  # type: ignore[arg-type]
 
 
 @pytest.fixture(autouse=True)
@@ -405,3 +406,66 @@ def test_journal_entry_request_matches_the_erp_api() -> None:
     entry = FakeHandler(execute=[], look_up=[]).journal_entry(Operation(external_reference="REPAY-1"), DONE)
     assert entry is not None
     assert to_erp_journal_entry(entry)["external_reference"] == "REPAY-1"
+
+
+def _crash() -> None:
+    raise Crash
+
+
+def test_injected_fineract_down_persists_the_request_and_executes_nothing() -> None:
+    faults = FaultInjector(enabled=True)
+    faults.arm(FaultPoint.FINERACT_DOWN, "REPAY-1", 1)
+    pipeline, store = _pipeline(faults=faults)
+    handler = FakeHandler(execute=[DONE], look_up=[None])
+    result = pipeline.submit(handler, "REPAY-1", PAYLOAD)
+    assert (result.status_code, result.body["operation_status"]) == (202, "RECEIVED")
+    assert (_row(store).attempts, _row(store).last_error) == (1, "injected fault: Fineract is down")
+    assert handler.executed == 0
+
+    pipeline.recover([handler])
+    assert _row(store).status == "COMPLETED"
+    assert handler.executed == 1
+
+
+def test_injected_fineract_timeout_after_send_is_resolved_by_look_up() -> None:
+    faults = FaultInjector(enabled=True)
+    faults.arm(FaultPoint.FINERACT_TIMEOUT_AFTER_SEND, "REPAY-1", 1)
+    pipeline, store = _pipeline(faults=faults)
+    handler = FakeHandler(execute=[DONE], look_up=[DONE])
+    assert pipeline.submit(handler, "REPAY-1", PAYLOAD).status_code == 201
+    assert (handler.executed, handler.looked_up) == (1, 1)
+
+
+def test_injected_erp_timeout_after_write_leaves_one_entry() -> None:
+    faults = FaultInjector(enabled=True)
+    faults.arm(FaultPoint.ERP_TIMEOUT_AFTER_WRITE, "REPAY-1", 1)
+    erp = FakeErp()
+    pipeline, store = _pipeline(erp, faults)
+    assert pipeline.submit(FakeHandler(execute=[DONE], look_up=[]), "REPAY-1", PAYLOAD).status_code == 201
+    assert (erp.posted, erp.looked_up, len(erp.entries)) == (1, 1, 1)
+
+
+def test_injected_crash_happens_after_erp_pending_is_saved() -> None:
+    faults = FaultInjector(enabled=True, crash=_crash)
+    faults.arm(FaultPoint.CRASH_BEFORE_ERP, "REPAY-1", 1)
+    erp = FakeErp()
+    pipeline, store = _pipeline(erp, faults)
+    handler = FakeHandler(execute=[DONE], look_up=[])
+    with pytest.raises(Crash):
+        pipeline.submit(handler, "REPAY-1", PAYLOAD)
+    assert (_row(store).status, _row(store).erp_request is not None, erp.posted) == ("ERP_PENDING", True, 0)
+
+    pipeline.recover([handler])
+    assert _row(store).status == "COMPLETED"
+    assert (erp.looked_up, erp.posted, handler.executed) == (1, 1, 1)
+
+
+def test_fineract_down_on_every_attempt_fails_with_503_and_nothing_sent() -> None:
+    faults = FaultInjector(enabled=True)
+    faults.arm(FaultPoint.FINERACT_DOWN, "REPAY-1", 10)
+    pipeline, store = _pipeline(faults=faults, operation_max_attempts=2)
+    handler = FakeHandler(execute=[DONE], look_up=[])
+    assert pipeline.submit(handler, "REPAY-1", PAYLOAD).status_code == 202
+    pipeline.recover([handler])
+    assert (_row(store).status, _row(store).response_code) == ("FAILED", 503)
+    assert (handler.executed, handler.looked_up) == (0, 0)

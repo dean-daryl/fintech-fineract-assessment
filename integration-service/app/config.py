@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     gl_sync_max_attempts: int = 10
     gl_sync_lease_seconds: int = 60
     recovery_interval_seconds: int = 30
+    fault_injection_enabled: bool = False
 
     operation_lease_seconds: int = 60
     operation_inline_attempts: int = 3

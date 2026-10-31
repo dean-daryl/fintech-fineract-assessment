@@ -1,0 +1,169 @@
+Run 432922: Part J failure scenarios
+
+Setup: onboard a client, apply for a loan and approve it
+  [PASS] client created (201)
+  [PASS] loan application created (201)
+  [PASS] loan approved (201)
+  loan LN-2026-000005, principal 5000000 RWF
+
+Scenario 1: ERP down after Fineract success (disbursement)
+  before:
+    operation          null
+    Fineract           0 transaction(s) with externalId SIMF-432922-S1-DISBURSE: []
+    ERP                GET -> HTTP 404; rows in journal_entries: 0
+  docker compose stop mock-erp
+  POST disbursement -> 202 {"external_reference": "SIMF-432922-S1-DISBURSE", "loan_reference": "LN-2026-000005", "operation_status": "ERP_PENDING", "amount": 5000000, "interest_portion": 0, "transaction_date": "2026-04-01", "outstanding_after": 5000000, "principal_portion": 0}
+  [PASS] caller gets 202 with operation_status ERP_PENDING and Fineract's result
+  during (ERP stopped):
+    operation          {"operation_type": "DISBURSE_LOAN", "status": "ERP_PENDING", "attempts": 1, "last_error": "POST /api/journal-entries: ConnectError('[Errno -2] Name or service not known')", "erp_transaction_id": null}
+    Fineract           1 transaction(s) with externalId SIMF-432922-S1-DISBURSE: [('Disbursement', 5000000, 0, 0)]
+    ERP                GET -> HTTP 0; rows in journal_entries: 0
+  [PASS] during: Fineract disbursed once; ERP has nothing
+  [PASS] during: the operation waits in ERP_PENDING with the failure recorded
+  same request again while the ERP is down -> 202 {"external_reference": "SIMF-432922-S1-DISBURSE", "loan_reference": "LN-2026-000005", "operation_status": "ERP_PENDING"}
+  [PASS] replay while pending: 202, Fineract still has one disbursement
+  POST /admin/recover while the ERP is down -> operation {"operation_type": "DISBURSE_LOAN", "status": "ERP_PENDING", "attempts": 1, "last_error": "POST /api/journal-entries: ConnectError('[Errno -2] Name or service not known')", "erp_transaction_id": null}
+  [PASS] recovery while the ERP is down keeps it ERP_PENDING
+  docker compose start mock-erp
+  ERP healthy again after 1s
+  POST /admin/recover until finished: 4s (deferred retries back off 5s, 10s, ...)
+  after recovery:
+    operation          {"operation_type": "DISBURSE_LOAN", "status": "COMPLETED", "attempts": 1, "last_error": "POST /api/journal-entries: ConnectError('[Errno -2] Name or service not known')", "erp_transaction_id": "JE-000017"}
+    Fineract           1 transaction(s) with externalId SIMF-432922-S1-DISBURSE: [('Disbursement', 5000000, 0, 0)]
+    ERP                GET -> JE-000017 [('1200', 5000000, 0), ('1100', 0, 5000000)]; rows in journal_entries: 1
+  [PASS] after: operation COMPLETED with an erp_transaction_id
+  [PASS] after: Fineract has exactly one Disbursement with this externalId
+  [PASS] after: ERP has exactly one journal entry for this reference (DB row count 1)
+  [PASS] after: the ERP entry carries Fineract's own numbers
+  [PASS] after: the operation names that ERP entry
+  [PASS] after: Loan Receivable (1200) moved by 5000000 exactly once (moved 5000000)
+  [PASS] replay after recovery: 200 with the same erp_transaction_id, no new entry
+
+Scenario 2: Fineract down (repayment)
+  before:
+    operation          null
+    Fineract           0 transaction(s) with externalId SIMF-432922-S2-REPAY: []
+    ERP                GET -> HTTP 404; rows in journal_entries: 0
+  armed FINERACT_DOWN x1000 for SIMF-432922-S2-REPAY
+  POST repayment -> 202 {"external_reference": "SIMF-432922-S2-REPAY", "loan_reference": "LN-2026-000005", "amount": 500000, "operation_status": "RECEIVED"}
+  [PASS] caller gets 202 with operation_status RECEIVED
+  during (Fineract down):
+    operation          {"operation_type": "REPAY_LOAN", "status": "RECEIVED", "attempts": 1, "last_error": "injected fault: Fineract is down", "erp_transaction_id": null}
+    Fineract           0 transaction(s) with externalId SIMF-432922-S2-REPAY: []
+    ERP                GET -> HTTP 404; rows in journal_entries: 0
+  [PASS] during: the request is persisted (RECEIVED, attempts 1, error recorded)
+  [PASS] during: nothing reached Fineract or the ERP
+  same request again (safe retry) -> 202 {"external_reference": "SIMF-432922-S2-REPAY", "loan_reference": "LN-2026-000005", "amount": 500000, "operation_status": "RECEIVED"}
+  [PASS] safe to retry: same reference and payload -> 202, still nothing executed
+  [PASS] same reference with a different amount -> 409
+  POST /admin/recover while Fineract is down -> operation {"operation_type": "REPAY_LOAN", "status": "RECEIVED", "attempts": 2, "last_error": "injected fault: Fineract is down", "erp_transaction_id": null}
+  [PASS] recovery while Fineract is down: retried (attempts 2), still RECEIVED
+  fault cleared: Fineract reachable again
+  POST /admin/recover until finished: 11s
+  after recovery:
+    operation          {"operation_type": "REPAY_LOAN", "status": "COMPLETED", "attempts": 0, "last_error": "injected fault: Fineract is down", "erp_transaction_id": "JE-000018"}
+    Fineract           1 transaction(s) with externalId SIMF-432922-S2-REPAY: [('Repayment', 500000, 383400, 116600)]
+    ERP                GET -> JE-000018 [('1100', 500000, 0), ('1200', 0, 383400), ('4100', 0, 116600)]; rows in journal_entries: 1
+  [PASS] after: operation COMPLETED with an erp_transaction_id
+  [PASS] after: Fineract has exactly one Repayment with this externalId
+  [PASS] after: ERP has exactly one journal entry for this reference (DB row count 1)
+  [PASS] after: the ERP entry carries Fineract's own numbers
+  [PASS] after: the operation names that ERP entry
+
+Scenario 3: Fineract times out after the repayment was sent
+  before:
+    operation          null
+    Fineract           0 transaction(s) with externalId SIMF-432922-S3-REPAY: []
+    ERP                GET -> HTTP 404; rows in journal_entries: 0
+  armed FINERACT_TIMEOUT_AFTER_SEND x1 for SIMF-432922-S3-REPAY
+  POST repayment -> 201 {"external_reference": "SIMF-432922-S3-REPAY", "loan_reference": "LN-2026-000005", "amount": 500000, "operation_status": "COMPLETED", "interest_portion": 91061, "transaction_date": "2026-06-01", "outstanding_after": 4207661, "principal_portion": 408939, "erp_transaction_id": "JE-000019"}
+  during: the service log of this request (correlation_id e81a0e75-9c20-4c52-826c-f03b74bdbf7b):
+    07:49:13.348 INFO     Operation received
+    07:49:13.457 INFO     HTTP Request: GET https://fineract:8443/fineract-provider/api/v1/loans/external-id/LN-2026-000005?associations=transactions "HTTP/1.1 200 "
+    07:49:13.460 INFO     Operation status changed
+    07:49:13.595 INFO     HTTP Request: POST https://fineract:8443/fineract-provider/api/v1/loans/5/transactions?command=repayment "HTTP/1.1 200 "
+    07:49:13.692 INFO     HTTP Request: GET https://fineract:8443/fineract-provider/api/v1/loans/external-id/LN-2026-000005/transactions/external-id/SIMF-432922-S3-REPAY "HTTP/1.1 200 "
+    07:49:13.692 WARNING  Fault fired: FINERACT_TIMEOUT_AFTER_SEND
+    07:49:13.692 WARNING  Fineract attempt failed
+    07:49:14.321 INFO     HTTP Request: GET https://fineract:8443/fineract-provider/api/v1/loans/external-id/LN-2026-000005/transactions/external-id/SIMF-432922-S3-REPAY "HTTP/1.1 200 "
+    07:49:14.325 INFO     Operation status changed
+    07:49:14.326 INFO     Operation status changed
+    07:49:14.332 INFO     HTTP Request: POST http://mock-erp:8000/api/journal-entries "HTTP/1.1 201 Created"
+    07:49:14.333 INFO     Operation status changed
+  [PASS] the repayment was sent to Fineract once and the response was lost
+  [PASS] the next step was a lookup by externalId, not a resend
+  [PASS] the caller still gets 201 with Fineract's split
+  after:
+    operation          {"operation_type": "REPAY_LOAN", "status": "COMPLETED", "attempts": 0, "last_error": null, "erp_transaction_id": "JE-000019"}
+    Fineract           1 transaction(s) with externalId SIMF-432922-S3-REPAY: [('Repayment', 500000, 408939, 91061)]
+    ERP                GET -> JE-000019 [('1100', 500000, 0), ('1200', 0, 408939), ('4100', 0, 91061)]; rows in journal_entries: 1
+  [PASS] after: operation COMPLETED with an erp_transaction_id
+  [PASS] after: Fineract has exactly one Repayment with this externalId
+  [PASS] after: ERP has exactly one journal entry for this reference (DB row count 1)
+  [PASS] after: the ERP entry carries Fineract's own numbers
+  [PASS] after: the operation names that ERP entry
+
+Scenario 4: ERP times out after the journal entry was written
+  before:
+    operation          null
+    Fineract           0 transaction(s) with externalId SIMF-432922-S4-REPAY: []
+    ERP                GET -> HTTP 404; rows in journal_entries: 0
+  armed ERP_TIMEOUT_AFTER_WRITE x1 for SIMF-432922-S4-REPAY
+  POST repayment -> 201 {"external_reference": "SIMF-432922-S4-REPAY", "loan_reference": "LN-2026-000005", "amount": 500000, "operation_status": "COMPLETED", "interest_portion": 57487, "transaction_date": "2026-07-01", "outstanding_after": 3765148, "principal_portion": 442513, "erp_transaction_id": "JE-000020"}
+  during: the service log of this request (correlation_id 1e708bc3-c7eb-4be1-a4e4-ae5803d1a44a):
+    07:49:15.204 INFO     Operation received
+    07:49:15.309 INFO     HTTP Request: GET https://fineract:8443/fineract-provider/api/v1/loans/external-id/LN-2026-000005?associations=transactions "HTTP/1.1 200 "
+    07:49:15.311 INFO     Operation status changed
+    07:49:15.461 INFO     HTTP Request: POST https://fineract:8443/fineract-provider/api/v1/loans/5/transactions?command=repayment "HTTP/1.1 200 "
+    07:49:15.562 INFO     HTTP Request: GET https://fineract:8443/fineract-provider/api/v1/loans/external-id/LN-2026-000005/transactions/external-id/SIMF-432922-S4-REPAY "HTTP/1.1 200 "
+    07:49:15.565 INFO     Operation status changed
+    07:49:15.567 INFO     Operation status changed
+    07:49:15.572 INFO     HTTP Request: POST http://mock-erp:8000/api/journal-entries "HTTP/1.1 201 Created"
+    07:49:15.573 WARNING  Fault fired: ERP_TIMEOUT_AFTER_WRITE
+    07:49:15.573 WARNING  ERP attempt failed
+    07:49:16.091 INFO     HTTP Request: GET http://mock-erp:8000/api/journal-entries/SIMF-432922-S4-REPAY "HTTP/1.1 200 OK"
+    07:49:16.097 INFO     Operation status changed
+  [PASS] the entry was posted once and the response was lost
+  [PASS] the retry looked the entry up instead of posting again
+  after:
+    operation          {"operation_type": "REPAY_LOAN", "status": "COMPLETED", "attempts": 0, "last_error": null, "erp_transaction_id": "JE-000020"}
+    Fineract           1 transaction(s) with externalId SIMF-432922-S4-REPAY: [('Repayment', 500000, 442513, 57487)]
+    ERP                GET -> JE-000020 [('1100', 500000, 0), ('1200', 0, 442513), ('4100', 0, 57487)]; rows in journal_entries: 1
+  [PASS] after: operation COMPLETED with an erp_transaction_id
+  [PASS] after: Fineract has exactly one Repayment with this externalId
+  [PASS] after: ERP has exactly one journal entry for this reference (DB row count 1)
+  [PASS] after: the ERP entry carries Fineract's own numbers
+  [PASS] after: the operation names that ERP entry
+  [PASS] Cash at Bank (1100) moved by 500000 exactly once (moved 500000)
+  a blind resend of the same entry straight to the ERP -> 200 JE-000020
+  the partner retries the same request -> 200 erp_transaction_id JE-000020
+  [PASS] retries return the same entry: ERP 200 and our 200, still one row
+
+Scenario 5: crash between Fineract success and the ERP call
+  before:
+    operation          null
+    Fineract           0 transaction(s) with externalId SIMF-432922-S5-REPAY: []
+    ERP                GET -> HTTP 404; rows in journal_entries: 0
+  armed CRASH_BEFORE_ERP x1 for SIMF-432922-S5-REPAY
+  POST repayment -> 0 {"connection_error": "RemoteDisconnected('Remote end closed connection without response')"}
+  [PASS] the caller's connection drops: the process died mid-request
+  integration service back after 2s (restart: unless-stopped)
+  [PASS] the container really restarted (RestartCount 1 -> 2)
+  during (right after the restart):
+    operation          {"operation_type": "REPAY_LOAN", "status": "ERP_PENDING", "attempts": 0, "last_error": null, "erp_transaction_id": null}
+    Fineract           1 transaction(s) with externalId SIMF-432922-S5-REPAY: [('Repayment', 500000, 448527, 51473)]
+    ERP                GET -> HTTP 404; rows in journal_entries: 0
+  [PASS] during: Fineract booked the repayment; the ERP has nothing yet
+  [PASS] during: the saved state says ERP_PENDING (persisted before the crash)
+  no manual action: the in-process recovery sweep finished it after 59s (once the 60s lease expired)
+  after recovery:
+    operation          {"operation_type": "REPAY_LOAN", "status": "COMPLETED", "attempts": 0, "last_error": null, "erp_transaction_id": "JE-000022"}
+    Fineract           1 transaction(s) with externalId SIMF-432922-S5-REPAY: [('Repayment', 500000, 448527, 51473)]
+    ERP                GET -> JE-000022 [('1100', 500000, 0), ('1200', 0, 448527), ('4100', 0, 51473)]; rows in journal_entries: 1
+  [PASS] after: operation COMPLETED with an erp_transaction_id
+  [PASS] after: Fineract has exactly one Repayment with this externalId
+  [PASS] after: ERP has exactly one journal entry for this reference (DB row count 1)
+  [PASS] after: the ERP entry carries Fineract's own numbers
+  [PASS] after: the operation names that ERP entry
+
+52/52 checks passed

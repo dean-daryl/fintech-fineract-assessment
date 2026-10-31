@@ -439,3 +439,61 @@ Partners identify clients and loans only by business ids. Fineract's numeric ids
 - `NEEDS_RECONCILIATION` has no way out yet. Re-queueing or fixing an operation by hand belongs to reconciliation work.
 - `erp_request` is a snapshot. If Fineract later reprocesses the loan and changes the split, the ERP entry stays as posted (D-021, reversals).
 - The ERP lookup compares the whole request, description included. Changing the description format would make old pending entries look different; with immutable entries that is the safe direction.
+
+## D-023: Failure handling, retry policy and failure injection (Part J)
+
+**State machine.** One table in `domain/states.py`; `check_transition` raises on anything else, inside the row lock that writes the status (D-014).
+
+| From | To | When |
+|---|---|---|
+| `RECEIVED` | `FINERACT_PENDING` | `prepare` passed (our own checks, live Fineract reads) |
+| `RECEIVED` | `FAILED` | `prepare` refused it, or Fineract stayed unreachable on every attempt (nothing was sent) |
+| `FINERACT_PENDING` | `FINERACT_DONE` | Fineract's result is known: from the call, or from a lookup by `externalId` |
+| `FINERACT_PENDING` | `FAILED` | Fineract refused it (4xx), and a lookup shows nothing was created |
+| `FINERACT_PENDING` | `NEEDS_RECONCILIATION` | Fineract's outcome stayed unknown after every attempt |
+| `FINERACT_DONE` | `ERP_PENDING` | Money moved; the journal entry is saved in the same write as `FINERACT_DONE` |
+| `FINERACT_DONE` | `NEEDS_RECONCILIATION` | Money moved, but no journal entry can be built from Fineract's transaction |
+| `FINERACT_DONE` | `COMPLETED` | Only operations that move no money (client, application, approval, GL sync) |
+| `ERP_PENDING` | `COMPLETED` | The ERP holds the entry (posted, or found by reference) |
+| `ERP_PENDING` | `NEEDS_RECONCILIATION` | The ERP refused it, holds a different entry under the reference, or stayed unreachable on every attempt |
+
+`COMPLETED`, `FAILED` and `NEEDS_RECONCILIATION` have no way out. `FAILED` always means "nothing happened downstream", so the partner may retry with a new reference. A deferred retry keeps its status and only moves `next_attempt_at`.
+
+**Retry policy.**
+- **Inline:** up to `operation_inline_attempts` (3) per request, sleeping 0.5 s then 1 s. Used for Fineract and ERP calls alike.
+- **Deferred:** when the inline attempts are used up, the row is released with `next_attempt_at` = 5 s doubling to a 5 min cap, plus up to 1 s of jitter (`domain/retry.py`). The caller gets 202 with the current status.
+- **Max attempts:** `operation_max_attempts` (10) deferred attempts per stage. The counter restarts when the operation enters `ERP_PENDING` (D-022). After the last one: `FAILED` if nothing was sent, otherwise a final lookup and then `FINERACT_DONE`, `FAILED` or `NEEDS_RECONCILIATION`.
+- **Who retries:** the request itself (inline), then the recovery sweep (`FOR UPDATE SKIP LOCKED` on due rows, plus a 60 s lease). The sweep runs at startup, every 30 s from an in-process timer, and on `POST /admin/recover`. No broker, no separate worker.
+
+**What is safe to retry.**
+
+| Call | Safe to resend? |
+|---|---|
+| Any GET (Fineract or ERP) | Always |
+| Fineract command, connection refused / 502 / 503 | Yes: it never reached Fineract |
+| Fineract command, read timeout / other 5xx | Only after a lookup by `externalId` finds nothing (rule 4). Disbursements and repayments carry our `external_reference` as `externalId`; approval is looked up by loan status |
+| ERP post, connection refused / 502 / 503 | Yes |
+| ERP post, read timeout / other 5xx | Look up by reference first. The resend is the saved, byte-identical entry, so even a blind resend would get 200 and the same entry (D-020, D-022) |
+| Any 4xx (Fineract or ERP) | Never: the answer will not change |
+| A partner request with the same `external_reference` and payload | Always: 202 while in progress, the stored result when finished (D-014) |
+
+**Failure injection.** `app/faults.py`, driven by `POST/GET/DELETE /admin/faults`. Off unless `FAULT_INJECTION_ENABLED=true`; the routes then answer 404 and the hooks never fire. Each fault is scoped to one `external_reference` and fires a set number of times, so the recovery timer and other requests are never affected.
+
+| Fault | Hook | What it stands for |
+|---|---|---|
+| `FINERACT_DOWN` | Before `prepare` | Fineract unreachable: nothing sent |
+| `FINERACT_TIMEOUT_AFTER_SEND` | After `execute` returned (the command plus its read-back of the new transaction) | Fineract booked it; the response was lost. The pipeline discards the answer and must find out again |
+| `ERP_TIMEOUT_AFTER_WRITE` | After the ERP post returned | The ERP wrote the entry; the response was lost |
+| `CRASH_BEFORE_ERP` | After `ERP_PENDING` is saved, before the ERP call | `os._exit(1)`: the process dies |
+
+- "ERP down" needs no hook: the scenario really stops the `mock-erp` container.
+- "Fineract down" is injected rather than real: Fineract takes minutes to start again, and stopping it would also break the other scenarios' reads. The hook raises the same `FineractUnavailableError` the client raises on a refused connection, before `prepare`, so the whole path from there on is the real one.
+- The crash is real: the process exits, Docker restarts it (`restart: unless-stopped`), and recovery runs in the new process.
+- Faults live in memory on purpose. They are test switches, not business state, and a crash must clear them.
+
+**Evidence.** `make simulate-failures` (S-J1 to S-J5) runs all five scenarios on one loan and prints, for each, our operation, Fineract's transactions with that `externalId`, and the ERP entry plus a row count from the ERP database, before, during and after recovery.
+
+**Known weaknesses.**
+- `/admin/*` has no authentication, and with fault injection on, anyone who reaches it can crash the service. Both are for this assessment's local stack only; a real deployment would protect admin routes and never enable faults.
+- After a crash, the operation waits for its lease (60 s) before the sweep takes it. A shorter lease recovers faster but risks overlapping a slow request (D-014).
+- `NEEDS_RECONCILIATION` has no way out yet (D-022).

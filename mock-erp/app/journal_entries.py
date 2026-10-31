@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -110,6 +110,22 @@ def post_journal_entry(payload: JournalEntryIn, session: SessionDep, response: R
         )
     response.status_code = status.HTTP_200_OK
     return _out(existing)
+
+
+@router.get("", response_model=list[JournalEntryOut])
+def list_journal_entries(
+    session: SessionDep,
+    from_date: Annotated[date, Query()],
+    to_date: Annotated[date, Query()],
+) -> list[JournalEntryOut]:
+    if from_date > to_date:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "from_date is after to_date")
+    entries = session.scalars(
+        select(JournalEntry)
+        .where(JournalEntry.entry_date >= from_date, JournalEntry.entry_date <= to_date)
+        .order_by(JournalEntry.entry_date, JournalEntry.id)
+    )
+    return [_out(entry) for entry in entries]
 
 
 @router.get("/{external_reference}", response_model=JournalEntryOut)

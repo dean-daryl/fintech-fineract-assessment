@@ -152,3 +152,47 @@ All five scenarios run on one loan with `make simulate-failures` (needs `FAULT_I
 - **During:** the caller's connection drops (`RemoteDisconnected`). Docker restarts the container (restart count 1 → 2) and it is healthy 2 s later. Right after the restart: operation `ERP_PENDING`, Fineract has the repayment (448,527 principal, 51,473 interest), the ERP has 0 rows.
 - **After:** with no manual action, the in-process recovery sweep completes it 59 s later, once the request's 60 s lease has expired: `COMPLETED`, `JE-000022` with Fineract's lines, one row.
 - **The brief's question.** *How is it recovered on restart?* State is saved before each call to the next system (rule 8), so the restart finds the operation in `ERP_PENDING` with its journal entry already saved. The recovery sweep runs at startup and every 30 s, and claims due rows whose lease has expired (`FOR UPDATE SKIP LOCKED`). It looks the entry up by reference (not found here), posts it, and completes the operation. A crash one step earlier, between Fineract and `FINERACT_DONE`, leaves `FINERACT_PENDING`; recovery then looks the Fineract transaction up by `externalId` before doing anything (D-014). Both crash points are also unit-tested (`tests/test_pipeline.py`).
+
+## Part K evidence at a glance
+
+`make simulate-reconciliation` seeds all four outcomes and one reversal on one new loan. It reports by references and by date range, then repairs what may be repaired. Evidence: `evidence/simulate-reconciliation.log`, **29/29 checks PASS**. Design: DECISIONS.md D-024.
+
+| # | What | Log lines |
+|---|---|---|
+| S-K1 | Seed all four outcomes and a reversal | 3–30 |
+| S-K2 | Report by references, by date range, and read-only | 31–68 |
+| S-K3 | Explicit, idempotent repair | 69–106 |
+
+## S-K1: Seeding the four outcomes
+
+- **Initial state:** a new client and loan `LN-2026-000006`, disbursed through the integration API on 2026-07-25. Each run uses its own three-day window (here 2026-07-25 to 2026-07-27), so the date-range report holds only this run's rows.
+- **Seeds:**
+
+| Reference | How | Expected |
+|---|---|---|
+| `SIMK-438778-DISBURSE`, `-REPAY-1` | Integration API | `MATCHED` |
+| `SIMK-438778-REPAY-UNDONE` | Integration API (ERP entry `JE-000025`), then reversed in Fineract (`POST /loans/external-id/{loan}/transactions/external-id/{ref}` with `transactionAmount: 0`) | Original `MATCHED`; `-REV` `MISSING_IN_ERP` |
+| `SIMK-438778-BRANCH-1` | Repayment of 300,000 booked straight in Fineract (back-office user) | `MISSING_IN_ERP` |
+| `SIMK-438778-BRANCH-2` | Repayment of 250,000 straight in Fineract; the ERP entry was keyed by hand with principal 161,588 instead of Fineract's 186,588 | `AMOUNT_MISMATCH` |
+| `SIMK-438778-ERP-ONLY` | A manual ERP entry of 150,000 (Dr 1100 / Cr 1200) with no Fineract transaction | `MISSING_IN_FINERACT` |
+
+- **Fineract state:** after the undo, `REPAY-UNDONE` has `manuallyReversed: true` and `reversedOnDate` 2026-10-31 (the day it was undone).
+
+## S-K2: The report
+
+- **Request:** `POST /api/reconciliation` with `external_references` (the seven references above, one of them unknown to both systems), then with `from_date`/`to_date` for the run's window.
+- **Response (both modes):** summary `MATCHED 3, MISSING_IN_ERP 2, MISSING_IN_FINERACT 1, AMOUNT_MISMATCH 1`. The mismatch lists `amount: Fineract 250000, ERP 225000`, `1100 debit: …` and `1200 credit: Fineract 186588, ERP 161588`. The unknown reference is in `not_found`. Each row carries the `loan_reference`, our operation status when one exists (`-` for the transactions made outside the integration), Fineract's side and the ERP's side. No Fineract numeric ids appear.
+- **Read-only:** across the three report calls, the ERP row count stayed at 25 and the loan's Fineract transactions were unchanged.
+- **Expected = actual:** every seeded reference got its expected status, the same in both modes.
+
+## S-K3: Repair
+
+- **Request:** `POST /api/reconciliation/repairs` with `{external_reference, loan_reference, transaction_reference}`.
+- **`MISSING_IN_ERP` (BRANCH-1):** 201 with `JE-000028`, built from Fineract's split (272,351 principal, 27,649 interest). The same request again gets 200 with `JE-000028`. A second repair reference for the same transaction gets 201 with the same `JE-000028`. The ERP holds one row. The same repair reference with a different payload gets 409.
+- **Missing reversal (`REPAY-UNDONE-REV`):** 201 with `JE-000030`, the mirror of `JE-000025`.
+- **Refused:**
+  - `AMOUNT_MISMATCH` gets 409 ("the ERP already holds a different journal entry"); the entry is untouched.
+  - `MISSING_IN_FINERACT` gets 404; nothing is written to Fineract.
+  - A `-REV` for a transaction that isn't reversed gets 409.
+- **After:** the date-range report shows `MATCHED 5, MISSING_IN_FINERACT 1, AMOUNT_MISMATCH 1`. The two rows a person must resolve are still there.
+- **Explanation:** the report reads Fineract live and builds the expected entry with the same mapping the posting step uses (D-021), so it compares against Fineract's numbers. Repair only adds what is missing in the ERP. It goes through the operations pipeline, so it is idempotent on its own reference, and the ERP's unique `external_reference` makes it idempotent per transaction as well.

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import date
 from typing import Any
 
 import httpx
@@ -66,9 +67,13 @@ class ErpClient:
             raise
         return _journal_entry(body)
 
-    def _send(self, method: str, path: str, json: dict[str, Any] | None) -> httpx.Response:
+    def list_journal_entries(self, from_date: date, to_date: date) -> list[ErpJournalEntry]:
+        params = {"from_date": from_date.isoformat(), "to_date": to_date.isoformat()}
+        return [_journal_entry(body) for body in self._send("GET", "/api/journal-entries", None, params).json()]
+
+    def _send(self, method: str, path: str, json: dict[str, Any] | None, params: dict[str, str] | None = None) -> httpx.Response:
         try:
-            response = self._http.request(method, path, json=json)
+            response = self._http.request(method, path, json=json, params=params)
         except (httpx.ConnectError, httpx.ConnectTimeout, httpx.PoolTimeout) as exc:
             raise ErpUnavailableError(f"{method} {path}: {exc!r}") from exc
         except httpx.TransportError as exc:

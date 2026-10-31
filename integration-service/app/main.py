@@ -10,6 +10,7 @@ from app.api.admin import router as admin_router
 from app.api.clients import router as clients_router
 from app.api.gl_accounts import router as gl_accounts_router
 from app.api.loans import router as loans_router
+from app.api.reconciliation import router as reconciliation_router
 from app.clients.erp import ErpClient
 from app.clients.fineract import FineractClient
 from app.config import get_settings
@@ -21,6 +22,7 @@ from app.services.gl_sync import GLSyncService
 from app.services.loans import LoanService
 from app.services.operations import OperationStore
 from app.services.pipeline import OperationHandler, OperationPipeline
+from app.services.reconciliation import ErpPostingRepair, ReconciliationService, RepairService
 from app.services.recovery import run_recovery
 
 log = logging.getLogger(__name__)
@@ -65,12 +67,15 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.gl_sync = GLSyncService(SessionLocal, erp, fineract, pipeline, settings)
     clients = ClientService(pipeline, ClientCreation(SessionLocal, fineract, settings), fineract)
     loans = LoanService(SessionLocal, pipeline, fineract, settings)
+    repair = ErpPostingRepair(SessionLocal, fineract, erp)
+    app.state.reconciliation = ReconciliationService(SessionLocal, fineract, erp)
+    app.state.repairs = RepairService(pipeline, repair)
     app.state.pipeline = pipeline
     app.state.store = store
     app.state.faults = faults
     app.state.clients = clients
     app.state.loans = loans
-    app.state.handlers = [*app.state.gl_sync.handlers, *clients.handlers, *loans.handlers]
+    app.state.handlers = [*app.state.gl_sync.handlers, *clients.handlers, *loans.handlers, repair]
 
     recovery = asyncio.create_task(_recovery_loop(app.state.gl_sync, pipeline, app.state.handlers, settings.recovery_interval_seconds))
     yield
@@ -83,6 +88,7 @@ app = FastAPI(title="Integration Service", lifespan=lifespan)
 app.include_router(gl_accounts_router, prefix=API_PREFIX)
 app.include_router(clients_router, prefix=API_PREFIX)
 app.include_router(loans_router, prefix=API_PREFIX)
+app.include_router(reconciliation_router, prefix=API_PREFIX)
 app.include_router(admin_router)
 
 

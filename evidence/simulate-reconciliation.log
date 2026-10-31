@@ -1,0 +1,106 @@
+Run 438778: Part K reconciliation
+
+Setup: client, loan, approval and disbursement through the integration API, window 2026-07-25 to 2026-07-27
+  [PASS] client created (201)
+  [PASS] loan application created (201)
+  [PASS] loan approved (201)
+  [PASS] disbursed through the API, ERP entry posted (201)
+  loan LN-2026-000006, principal 5000000 RWF
+
+Seed MATCHED: repayment through the integration API
+  POST repayment -> 201 {"external_reference": "SIMK-438778-REPAY-1", "loan_reference": "LN-2026-000006", "amount": 500000, "operation_status": "COMPLETED", "interest_portion": 116600, "transaction_date": "2026-07-26", "outstanding_after": 4616600, "principal_portion": 383400, "erp_transaction_id": "JE-000024"}
+  [PASS] repayment completed with an ERP entry (201)
+
+Seed a reversal: repayment through the API, then reversed in Fineract (no undo route exists in our API)
+  [PASS] repayment completed with an ERP entry (201)
+  Fineract undo (adjust to 0) -> 200 {"officeId": 2, "clientId": 6, "loanId": 6, "resourceId": 34, "changes": {"transactionDate": "2026-07-26", "transactionAmount": "0", "locale": "en", "dateFormat": "yyyy-MM-dd"}, "resourceExternalId": "SIMK-438778-REPAY-UNDONE"}
+  [PASS] Fineract marks it manuallyReversed
+  reversedOnDate [2026, 10, 31]
+
+Seed MISSING_IN_ERP: repayment booked straight in Fineract
+  [PASS] Fineract booked SIMK-438778-BRANCH-1 directly (200)
+
+Seed AMOUNT_MISMATCH: repayment straight in Fineract, ERP entry keyed in with a typo
+  [PASS] Fineract booked SIMK-438778-BRANCH-2 directly (200)
+  Fineract split: principal 186588, interest 63412; ERP keyed principal 161588
+  [PASS] ERP accepted the mistyped entry (201)
+
+Seed MISSING_IN_FINERACT: manual ERP entry with no Fineract transaction
+  [PASS] ERP accepted the entry (201)
+
+Report by references: POST /api/reconciliation {"external_references": ["SIMK-438778-DISBURSE", "SIMK-438778-REPAY-1", "SIMK-438778-REPAY-UNDONE", "SIMK-438778-BRANCH-1", "SIMK-438778-BRANCH-2", "SIMK-438778-ERP-ONLY", "SIMK-438778-NEVER-HAPPENED"]} -> 200
+  summary {"MATCHED": 3, "MISSING_IN_ERP": 2, "MISSING_IN_FINERACT": 1, "AMOUNT_MISMATCH": 1}, loans scanned 6, not_found ['SIMK-438778-NEVER-HAPPENED']
+  MATCHED              SIMK-438778-DISBURSE             op=COMPLETED  fineract=Disbursement 5000000       erp=JE-000023 5000000
+  MATCHED              SIMK-438778-REPAY-1              op=COMPLETED  fineract=Repayment 500000           erp=JE-000024 500000
+  MATCHED              SIMK-438778-REPAY-UNDONE         op=COMPLETED  fineract=Repayment 200000 reversed  erp=JE-000025 200000
+  MISSING_IN_ERP       SIMK-438778-REPAY-UNDONE-REV     op=COMPLETED  fineract=Repayment 200000 reversed  erp=-
+  MISSING_IN_ERP       SIMK-438778-BRANCH-1             op=-          fineract=Repayment 300000           erp=-
+  AMOUNT_MISMATCH      SIMK-438778-BRANCH-2             op=-          fineract=Repayment 250000           erp=JE-000026 225000
+                         difference: amount: Fineract 250000, ERP 225000
+                         difference: 1100 debit: Fineract 250000, ERP 225000
+                         difference: 1200 credit: Fineract 186588, ERP 161588
+  MISSING_IN_FINERACT  SIMK-438778-ERP-ONLY             op=-          fineract=-                          erp=JE-000027 150000
+  [PASS] references: every seeded reference has its expected status
+  [PASS] references: a reference neither system knows is listed in not_found
+  [PASS] references: the summary shows all four outcomes
+  [PASS] references: the mismatch names the amount and the 1200 credit
+  [PASS] no Fineract numeric id appears in the report
+
+Report by date range: POST /api/reconciliation {"from_date": "2026-07-25", "to_date": "2026-07-27"} -> 200
+  summary {"MATCHED": 3, "MISSING_IN_ERP": 2, "MISSING_IN_FINERACT": 1, "AMOUNT_MISMATCH": 1}, loans scanned 6, not_found []
+  MATCHED              SIMK-438778-DISBURSE             op=COMPLETED  fineract=Disbursement 5000000       erp=JE-000023 5000000
+  MATCHED              SIMK-438778-REPAY-1              op=COMPLETED  fineract=Repayment 500000           erp=JE-000024 500000
+  MATCHED              SIMK-438778-REPAY-UNDONE         op=COMPLETED  fineract=Repayment 200000 reversed  erp=JE-000025 200000
+  MISSING_IN_ERP       SIMK-438778-REPAY-UNDONE-REV     op=COMPLETED  fineract=Repayment 200000 reversed  erp=-
+  MISSING_IN_ERP       SIMK-438778-BRANCH-1             op=-          fineract=Repayment 300000           erp=-
+  AMOUNT_MISMATCH      SIMK-438778-BRANCH-2             op=-          fineract=Repayment 250000           erp=JE-000026 225000
+                         difference: amount: Fineract 250000, ERP 225000
+                         difference: 1100 debit: Fineract 250000, ERP 225000
+                         difference: 1200 credit: Fineract 186588, ERP 161588
+  MISSING_IN_FINERACT  SIMK-438778-ERP-ONLY             op=-          fineract=-                          erp=JE-000027 150000
+  [PASS] date range: same statuses as by references
+
+Report by references, run again: POST /api/reconciliation {"external_references": ["SIMK-438778-BRANCH-1"]} -> 200
+  summary {"MATCHED": 0, "MISSING_IN_ERP": 1, "MISSING_IN_FINERACT": 0, "AMOUNT_MISMATCH": 0}, loans scanned 6, not_found []
+  MISSING_IN_ERP       SIMK-438778-BRANCH-1             op=-          fineract=Repayment 300000           erp=-
+  [PASS] read-only: ERP row count unchanged (25 -> 25)
+  [PASS] read-only: Fineract transactions unchanged
+
+Repair MISSING_IN_ERP (BRANCH-1), same request twice, then with a second reference
+  repair -> 201 {"external_reference": "SIMK-438778-FIX-1", "loan_reference": "LN-2026-000006", "transaction_reference": "SIMK-438778-BRANCH-1", "operation_status": "COMPLETED", "amount": 300000, "reversed": false, "interest_portion": 27649, "transaction_date": "2026-07-27", "transaction_type": "Repayment", "principal_portion": 272351, "erp_transaction_id": "JE-000028"}
+  repair again -> 200 {"amount": 300000, "reversed": false, "loan_reference": "LN-2026-000006", "interest_portion": 27649, "operation_status": "COMPLETED", "transaction_date": "2026-07-27", "transaction_type": "Repayment", "principal_portion": 272351, "erp_transaction_id": "JE-000028", "external_reference": "SIMK-438778-FIX-1", "transaction_reference": "SIMK-438778-BRANCH-1"}
+  repair with another reference -> 201 {"external_reference": "SIMK-438778-FIX-1B", "loan_reference": "LN-2026-000006", "transaction_reference": "SIMK-438778-BRANCH-1", "operation_status": "COMPLETED", "amount": 300000, "reversed": false, "interest_portion": 27649, "transaction_date": "2026-07-27", "transaction_type": "Repayment", "principal_portion": 272351, "erp_transaction_id": "JE-000028"}
+  [PASS] first repair 201 with an ERP entry
+  [PASS] replay 200, same erp_transaction_id
+  [PASS] second reference finds the same entry
+  [PASS] ERP holds exactly one SIMK-438778-BRANCH-1
+  same reference, different payload -> 409 {"external_reference": "SIMK-438778-FIX-1", "error": "external_reference was already used with a different payload"}
+  [PASS] same repair reference with a different payload: 409
+
+Repair the missing reversal (REPAY-UNDONE-REV)
+  repair -> 201 {"external_reference": "SIMK-438778-FIX-2", "loan_reference": "LN-2026-000006", "transaction_reference": "SIMK-438778-REPAY-UNDONE-REV", "operation_status": "COMPLETED", "amount": 200000, "reversed": true, "interest_portion": 27649, "transaction_date": "2026-07-26", "transaction_type": "Repayment", "principal_portion": 172351, "erp_transaction_id": "JE-000030"}
+  [PASS] reversal posted (201)
+
+Repairs that must be refused
+  AMOUNT_MISMATCH -> 409 {"external_reference": "SIMK-438778-FIX-3", "loan_reference": "LN-2026-000006", "transaction_reference": "SIMK-438778-BRANCH-2", "operation_status": "FAILED", "error": "the ERP already holds a different journal entry SIMK-438778-BRANCH-2; repair only posts entries missing from the ERP"}
+  [PASS] AMOUNT_MISMATCH is not repaired: 409, ERP entry untouched
+  MISSING_IN_FINERACT -> 404 {"external_reference": "SIMK-438778-FIX-4", "loan_reference": "LN-2026-000006", "transaction_reference": "SIMK-438778-ERP-ONLY", "operation_status": "FAILED", "error": "loan LN-2026-000006 has no disbursement or repayment SIMK-438778-ERP-ONLY in Fineract"}
+  [PASS] MISSING_IN_FINERACT is not repaired: 404, nothing written to Fineract
+  reversal of a live transaction -> 409 {"external_reference": "SIMK-438778-FIX-5", "loan_reference": "LN-2026-000006", "transaction_reference": "SIMK-438778-REPAY-1-REV", "operation_status": "FAILED", "error": "nothing to repair: Fineract expects no journal entry SIMK-438778-REPAY-1-REV: the transaction is not reversed"}
+  [PASS] a reversal Fineract does not have is refused: 409
+
+Report by date range after the repairs: POST /api/reconciliation {"from_date": "2026-07-25", "to_date": "2026-07-27"} -> 200
+  summary {"MATCHED": 5, "MISSING_IN_ERP": 0, "MISSING_IN_FINERACT": 1, "AMOUNT_MISMATCH": 1}, loans scanned 6, not_found []
+  MATCHED              SIMK-438778-DISBURSE             op=COMPLETED  fineract=Disbursement 5000000       erp=JE-000023 5000000
+  MATCHED              SIMK-438778-REPAY-1              op=COMPLETED  fineract=Repayment 500000           erp=JE-000024 500000
+  MATCHED              SIMK-438778-REPAY-UNDONE         op=COMPLETED  fineract=Repayment 200000 reversed  erp=JE-000025 200000
+  MATCHED              SIMK-438778-REPAY-UNDONE-REV     op=COMPLETED  fineract=Repayment 200000 reversed  erp=JE-000030 200000
+  MATCHED              SIMK-438778-BRANCH-1             op=-          fineract=Repayment 300000           erp=JE-000028 300000
+  AMOUNT_MISMATCH      SIMK-438778-BRANCH-2             op=-          fineract=Repayment 250000           erp=JE-000026 225000
+                         difference: amount: Fineract 250000, ERP 225000
+                         difference: 1100 debit: Fineract 250000, ERP 225000
+                         difference: 1200 credit: Fineract 186588, ERP 161588
+  MISSING_IN_FINERACT  SIMK-438778-ERP-ONLY             op=-          fineract=-                          erp=JE-000027 150000
+  [PASS] after repair: BRANCH-1 and the reversal MATCHED; the mismatch and the ERP-only entry still need a person
+
+29/29 checks passed

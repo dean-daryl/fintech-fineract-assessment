@@ -436,7 +436,7 @@ Partners identify clients and loans only by business ids. Fineract's numeric ids
 **Evidence.** `make simulate-loan-lifecycle` (S-D1) now checks the ERP entry for the disbursement and every repayment against Fineract's own transaction, that the nine rejected disbursements have no entry, and that the ERP balances of 1100, 1200 and 4100 moved by exactly Fineract's amounts. The failure scenarios (ERP down, timeouts, crash) belong to Part J.
 
 **Known weaknesses.**
-- `NEEDS_RECONCILIATION` has no way out yet. Re-queueing or fixing an operation by hand belongs to reconciliation work.
+- `NEEDS_RECONCILIATION` has no way out of its own. Reconciliation (D-024) reports the gap and can repair a missing ERP entry, but the operation row stays terminal.
 - `erp_request` is a snapshot. If Fineract later reprocesses the loan and changes the split, the ERP entry stays as posted (D-021, reversals).
 - The ERP lookup compares the whole request, description included. Changing the description format would make old pending entries look different; with immutable entries that is the safe direction.
 
@@ -496,4 +496,64 @@ Partners identify clients and loans only by business ids. Fineract's numeric ids
 **Known weaknesses.**
 - `/admin/*` has no authentication, and with fault injection on, anyone who reaches it can crash the service. Both are for this assessment's local stack only; a real deployment would protect admin routes and never enable faults.
 - After a crash, the operation waits for its lease (60 s) before the sweep takes it. A shorter lease recovers faster but risks overlapping a slow request (D-014).
-- `NEEDS_RECONCILIATION` has no way out yet (D-022).
+- `NEEDS_RECONCILIATION` operations stay terminal; D-024 reports and repairs the ERP gap behind them.
+
+## D-024: Reconciliation (Part K)
+
+**Decision.** `POST /api/reconciliation` compares Fineract's disbursements and repayments with the ERP's journal entries, keyed by `external_reference`, and returns one row per expected or found journal entry. The comparison is a pure function (`domain/reconciliation.py`, `tests/test_reconciliation.py`); `services/reconciliation.py` only gathers the two sides.
+
+**Why `POST` for a read.** The brief names `POST /api/reconciliation`, and reference mode sends up to 500 references, which belong in a body rather than a query string. The call changes nothing, so it takes no `external_reference` and writes no operation row. Repairs, which do change state, have their own route.
+
+**Request.** Exactly one of `from_date` + `to_date`, or `external_references` (1 to 500). Anything else gets 422. If Fineract or the ERP can't be reached, the call returns 503 and no report: a partial report would show real-looking gaps.
+
+**Gathering the two sides.**
+- **Fineract:** every loan in `loan_map` is read live with its transactions (`GET /loans/external-id/{loan_reference}?associations=transactions`). Only disbursements and repayments count; accruals and the rest have no ERP entry (D-021). Date mode keeps transactions dated inside the range. Reference mode keeps the ones whose `externalId` was asked for. Both modes index every transaction of every loan, so a reference whose ERP entry is dated differently is still paired. The operations table is never used as a source of loan data (rule 7). It only adds `operation_status` to a row so a `NEEDS_RECONCILIATION` operation shows next to its gap.
+- **ERP:** a new `GET /api/journal-entries?from_date&to_date` lists entries by `entry_date`. Only *loan entries* count: those with a line on 1200, 4100 or 2100. That keeps unrelated journals out of `MISSING_IN_FINERACT`. Any expected entry not in the list is then looked up by reference (`GET /api/journal-entries/{ref}`) before it is called missing. That catches a `-REV` entry dated on the reversal day, outside the range.
+
+**Comparison.** The expected entry is `journal_entry_for(transaction)`, the same function the posting step uses (D-021), so the numbers are Fineract's (rule 5).
+
+| Case | Status |
+|---|---|
+| Expected lines equal the ERP lines | `MATCHED` |
+| Fineract only | `MISSING_IN_ERP` |
+| ERP only (loan entry) | `MISSING_IN_FINERACT` |
+| Any difference in the total, an account's debit or credit, or the currency | `AMOUNT_MISMATCH`, with `differences` such as `1200 credit: Fineract 186588, ERP 161588` |
+
+- **"Same amount and type".** The brief has four statuses. Type is checked through the accounts: a repayment debits 1100, a disbursement credits it. So a wrong type, or a correct total with a wrong principal/interest split, is `AMOUNT_MISMATCH`, and `differences` says exactly which lines.
+- **Not compared:** dates and descriptions. The brief says amount and type, and the date range already decides what is in scope. Both dates are in the response.
+- **Edge cases:**
+  - A Fineract disbursement or repayment with no `externalId` (booked outside us without one) is `MISSING_IN_ERP` with `external_reference: null` and a note: no ERP entry can carry it.
+  - A transaction the mapping refuses (for example with a fee portion) is `MISSING_IN_ERP`, or `AMOUNT_MISMATCH` if the ERP has an entry under its reference, with the mapping error as the note.
+
+**Reversals.** ERP entries are immutable (D-020), so a reversal is a second entry, `<ref>-REV`, with debits and credits swapped and dated on Fineract's `reversedOnDate` (`reversal_of`, D-021). A reversed Fineract transaction (`manuallyReversed: true`) expects both entries, and each is its own row:
+
+| Fineract | ERP | Rows |
+|---|---|---|
+| Reversed | Original and `-REV` | Both `MATCHED` (net zero on both sides) |
+| Reversed | Original only | Original `MATCHED`, `-REV` `MISSING_IN_ERP` |
+| Reversed | Neither | One `MATCHED` row with a note: reversed before it reached the ERP, both sides net to zero |
+| Not reversed | Original and `-REV` | Original `MATCHED`, `-REV` `MISSING_IN_FINERACT` |
+
+If Fineract reprocesses later repayments after a reversal and changes their split, those repayments show as `AMOUNT_MISMATCH` against the entries posted earlier. That is correct: the ERP holds a snapshot (D-022). The service still has no undo route (D-017). The simulation reverses a transaction directly in Fineract (`POST /loans/external-id/{loan}/transactions/external-id/{ref}` with `transactionAmount: 0`, the 1.16.1 adjust command).
+
+**Repair: explicit and idempotent.** `POST /api/reconciliation/repairs {external_reference, loan_reference, transaction_reference}` is the only way the reconciliation writes anything.
+- **What it repairs:** only `MISSING_IN_ERP`. It reads the Fineract transaction, builds the entry (or the `-REV` reversal), and posts it to the ERP.
+- **How it runs:** it is a new operation type, `REPAIR_ERP_POSTING`, run by the normal pipeline: the Fineract step is a read, followed by `FINERACT_DONE -> ERP_PENDING -> COMPLETED`. So it gets the operations table's idempotency, the same retries and recovery, and look-up-before-resend.
+- **Idempotent twice over:**
+  - Same reference and payload: the stored result. Same reference, other payload: 409.
+  - A second repair reference for the same transaction finds the identical entry already in the ERP and returns its `erp_transaction_id`, because the ERP is unique on `external_reference`.
+- **Refused:**
+  - The ERP already holds a *different* entry under the reference (`AMOUNT_MISMATCH`): 409. ERP entries are immutable, and deciding which side is wrong needs a person.
+  - The transaction is not in Fineract (`MISSING_IN_FINERACT`): 404. Repair never writes to Fineract, the source of truth for loans.
+  - A `-REV` for a transaction that isn't reversed: 409.
+- **What it doesn't change:** a repair does not move an older operation out of `NEEDS_RECONCILIATION`, which stays terminal (D-023). After a repair, the report shows the row `MATCHED` with `operation_status: NEEDS_RECONCILIATION`, which keeps the history visible.
+
+**Evidence.** `make simulate-reconciliation` (S-K1 to S-K3): all four outcomes plus a reversal seeded on one loan; both report modes; read-only checked by row counts; repair, replay and the refusals.
+
+**Known weaknesses.**
+- The Fineract side reads every loan in `loan_map`, one call per loan, on every run. That's fine at assessment scale. At volume it needs Fineract-side filtering (for example the journal entries API by date) or paging.
+- Loans created in Fineract outside this service are not scanned, so their transactions can't be `MISSING_IN_ERP`. Their ERP entries still show as `MISSING_IN_FINERACT`.
+- "Loan entry" is decided by account (1200, 4100, 2100). A manual ERP journal on those accounts that has nothing to do with a loan shows as `MISSING_IN_FINERACT`. A `source` field on ERP entries would be more exact, but it changes the ERP schema.
+- Date mode selects Fineract transactions by their transaction date. A transaction dated before the range but reversed inside it is not picked up by that range.
+- Reports are not stored. Each call recomputes from the live systems.
+- GL (master-data) discrepancies are not reconciled: a stretch item.

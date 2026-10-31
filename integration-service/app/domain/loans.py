@@ -1,5 +1,6 @@
 """Partner loan requests to Fineract loan commands, and Fineract loan data parsing. Pure functions, no I/O."""
 
+import datetime
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
@@ -42,6 +43,7 @@ class FineractLoanTransaction:
     overpayment_portion: int
     outstanding_after: int
     reversed: bool
+    reversed_on: datetime.date | None = None
 
 
 @dataclass(frozen=True)
@@ -169,6 +171,7 @@ def parse_loan_transaction(body: dict[str, Any]) -> FineractLoanTransaction:
         overpayment_portion=to_amount(body.get("overpaymentPortion")),
         outstanding_after=to_amount(body.get("outstandingLoanBalance")),
         reversed=bool(body.get("manuallyReversed")),
+        reversed_on=parse_fineract_date(body.get("reversedOnDate")),
     )
 
 

@@ -10,6 +10,7 @@ class OperationType(StrEnum):
     APPROVE_LOAN = "APPROVE_LOAN"
     DISBURSE_LOAN = "DISBURSE_LOAN"
     REPAY_LOAN = "REPAY_LOAN"
+    REPAIR_ERP_POSTING = "REPAIR_ERP_POSTING"
 
 
 class OperationStatus(StrEnum):

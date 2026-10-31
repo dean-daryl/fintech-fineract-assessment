@@ -115,6 +115,10 @@
           "request": { "method": "GET", "url": "{{integration_url}}/api/gl-accounts" }
         },
         {
+          "name": "Get transaction by external_reference",
+          "request": { "method": "GET", "url": "{{integration_url}}/api/transactions/{{gl_sync_reference}}" }
+        },
+        {
           "name": "Run recovery sweep",
           "request": {
             "method": "POST",

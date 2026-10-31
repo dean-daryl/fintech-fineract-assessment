@@ -202,6 +202,7 @@ def main() -> int:
     codes = sorted(code for code, _ in results)
     print(f"  -> status codes {codes}")
     winner = next((body for code, body in results if code == 201), None)
+    rejected = next((body["external_reference"] for code, body in results if code == 409), f"SIM-{RUN}-DISBURSE-0")
     if winner:
         show("winning disbursement", 201, winner)
     check("exactly one 201, the other nine 409", codes.count(201) == 1 and codes.count(409) == 9)
@@ -269,7 +270,19 @@ def main() -> int:
     print(json.dumps(loan, indent=2))
     check("GET /api/loans/{ref} reports Fineract's status", loan.get("status") == "Closed (obligations met)")
 
-    print("\n11. No Fineract numeric ids in any response")
+    print("\n11. Any transaction by its external_reference")
+    for reference, posted in ((f"SIM-{RUN}-REPAY-1", None), (f"SIM-{RUN}-PAYOFF", body)):
+        code, transaction = ours("GET", f"/api/transactions/{reference}")
+        show(f"GET /api/transactions/{reference}", code, transaction)
+        check(f"{reference}: REPAY_LOAN, COMPLETED", code == 200 and (transaction["operation_type"], transaction["operation_status"]) == ("REPAY_LOAN", "COMPLETED"))
+        if posted is not None:
+            check("its result is the body the partner got from the POST", transaction["result"] == posted)
+    code, transaction = ours("GET", f"/api/transactions/{rejected}")
+    check("a rejected disbursement reads back as FAILED with its 409 error", code == 200 and transaction["operation_status"] == "FAILED" and transaction["result"]["code"] == "conflict")
+    code, transaction = ours("GET", f"/api/transactions/SIM-{RUN}-UNKNOWN")
+    check("an unknown reference -> 404", code == 404 and transaction["code"] == "not_found")
+
+    print("\n12. No Fineract numeric ids in any response")
     leaked = find_keys(responses, FINERACT_ID_KEYS)
     print(f"  scanned {len(responses)} responses, keys found: {sorted(leaked) or 'none'}")
     check("no Fineract id keys in our responses", not leaked)

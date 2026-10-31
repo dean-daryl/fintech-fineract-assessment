@@ -646,3 +646,26 @@ If Fineract reprocesses later repayments after a reversal and changes their spli
 - One key per route group and no per-partner identity. A second partner would need its own key and an `operations` column recording which partner sent each request. Keys rotate only by restarting with new values.
 - The service itself serves plain HTTP on port 8000, so in a real deployment TLS would come from a reverse proxy in front of it.
 - Failed operations stored before this change replay their original body, which has no `code`.
+
+## D-028: `GET /api/transactions/{external_reference}` (Part E)
+
+**Decision.** A partner can read any request it has sent by its `external_reference`: GL sync, client creation, loan application, approval, disbursement, repayment or ERP repair. The response is the operation row, never a live call to Fineract or the ERP:
+
+```json
+{"external_reference": "SIM-445908-REPAY-1", "operation_type": "REPAY_LOAN", "operation_status": "COMPLETED", "attempts": 0,
+ "created_at": "...", "updated_at": "...",
+ "result": {"loan_reference": "LN-2026-000022", "amount": 500000, "principal_portion": 383400, "interest_portion": 116600,
+            "outstanding_after": 4616600, "erp_transaction_id": "JE-000097", "operation_status": "COMPLETED", ...}}
+```
+
+- **`result`** is the body the partner got (or will get on replay), with the current `operation_status` on top. For a finished operation it equals the stored response, which the lifecycle simulation checks against the original POST. For one still in progress, it carries what is known so far, e.g. Fineract's split while the ERP posting is pending. A failed operation shows its `error` and `code`.
+- **Read from our table, not Fineract.** The brief calls this a transaction lookup, and the operations table is the record of what this service did and what it answered. Loan status and balances stay live in `GET /api/loans/{loan_reference}` (rule 7). The principal/interest split in `result` is Fineract's own, as recorded when the transaction was booked (D-021).
+- **Not exposed:** the raw `last_error`, `next_attempt_at` and `locked_until`. They are internal retry state, and a transport error's text can contain a Fineract URL with a numeric ID. `/admin/operations/{ref}` still shows them to operators.
+- **One reference, several types.** Uniqueness is per `(operation_type, external_reference)` (D-014), so a partner can legally reuse a reference across types. Then the lookup returns 409 `ambiguous_reference` listing the types, and `?operation_type=REPAY_LOAN` picks one. No reference is guessed.
+- **404** (`not_found`) for an unknown reference. It needs the partner key (D-027).
+- **Evidence.** `tests/test_transactions.py` covers the view and the route (found, in progress, 404, ambiguous, filter, bad filter, auth). Step 11 of `make simulate-loan-lifecycle` reads a repayment, the payoff (equal to its POST body), a rejected disbursement and an unknown reference. Step 12 scans these responses for Fineract IDs too.
+
+**Known weaknesses.**
+- No list or search by loan; `GET /api/loans/{loan_reference}` lists a loan's transactions live from Fineract.
+- A failed operation's `error` text is what the partner got at the time. If Fineract was unreachable on every attempt, that text includes the transport error, which names the Fineract URL. Not seen in any run so far; a scan of every stored response and `last_error` found no Fineract IDs.
+

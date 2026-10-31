@@ -14,6 +14,7 @@ from app.api.clients import router as clients_router
 from app.api.gl_accounts import router as gl_accounts_router
 from app.api.loans import router as loans_router
 from app.api.reconciliation import router as reconciliation_router
+from app.api.transactions import router as transactions_router
 from app.auth import require_admin_key, require_partner_key
 from app.clients.erp import ErpClient
 from app.clients.fineract import FineractClient
@@ -97,6 +98,7 @@ app.include_router(gl_accounts_router, prefix=API_PREFIX, dependencies=partner)
 app.include_router(clients_router, prefix=API_PREFIX, dependencies=partner)
 app.include_router(loans_router, prefix=API_PREFIX, dependencies=partner)
 app.include_router(reconciliation_router, prefix=API_PREFIX, dependencies=partner)
+app.include_router(transactions_router, prefix=API_PREFIX, dependencies=partner)
 app.include_router(admin_router, dependencies=[Depends(require_admin_key)])
 
 

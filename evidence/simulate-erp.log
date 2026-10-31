@@ -1,0 +1,43 @@
+Run 450999: ERP at http://localhost:8001
+
+1. Seeded chart of accounts
+  GET /api/accounts -> 200: 1100 Cash at Bank, 1200 Loan Receivable, 1300 Transfers in Suspense, 2100 Loan Overpayments, 4100 Interest Income on Loans, 4200 Fee Income, 4300 Penalty Income, 4400 Recoveries Income, 5100 Loan Losses Written Off
+  [PASS] all 9 seeded accounts present
+  balances before: {'1100': 500799, '1300': 0}
+
+2. Same journal entry sent 10 times in parallel
+  POST /api/journal-entries {"external_reference": "SIM-ERP-450999-1", "entry_date": "2026-10-31", "description": "Simulation transfer 1100 -> 1300", "currency": "RWF", "lines": [{"account_code": "1300", "debit": 250000}, {"account_code": "1100", "credit": 250000}]}
+  -> status codes [200, 200, 200, 200, 200, 200, 200, 200, 200, 201]
+  [PASS] one 201, the other 9 200
+  [PASS] every response has the same body
+  balances after: {'1100': 250799, '1300': 250000}
+  [PASS] posted once: 1300 up 250000, 1100 down 250000
+
+3. Read it back by external_reference
+  GET /api/journal-entries/SIM-ERP-450999-1 -> 200 {"id": "JE-000006", "external_reference": "SIM-ERP-450999-1", "entry_date": "2026-10-31", "description": "Simulation transfer 1100 -> 1300", "currency": "RWF", "lines": [{"account_code": "1300", "account_name": "Transfers in Suspense", "debit": 250000, "credit": 0}, {"account_code": "1100", "account_name": "Cash at Bank", "debit": 0, "credit": 250000}], "total_debit": 250000, "total_credit": 250000, "created_at": "2026-10-31T12:49:59.633991Z"}
+  [PASS] found, balanced, two lines
+
+4. Same reference, different amount
+  -> 409 {"detail": "journal entry SIM-ERP-450999-1 already exists with different details"}
+  [PASS] 409
+
+5. Rejected entries are never stored
+  unbalanced: POST -> 422 {"detail": "entry is unbalanced: debits 250000 != credits 249999"}
+  [PASS] unbalanced: 422 and not stored (GET -> 404)
+  unknown account: POST -> 422 {"detail": "unknown account codes: 9999"}
+  [PASS] unknown account: 422 and not stored (GET -> 404)
+  single line: POST -> 422 {"detail": "a journal entry needs at least two lines"}
+  [PASS] single line: 422 and not stored (GET -> 404)
+  debit and credit on one line: POST -> 422 {"detail": "line 1 must have either a debit or a credit"}
+  [PASS] debit and credit on one line: 422 and not stored (GET -> 404)
+  [PASS] balances unchanged by rejected entries
+
+6. Offsetting entry
+  -> 201
+  balances after: {'1100': 500799, '1300': 0}
+  [PASS] 201, and balances are back where they started
+
+7. Unknown account balance
+  [PASS] 404
+
+13/13 checks passed

@@ -2,15 +2,17 @@ Account: {"code": "1200", "name": "Loan Receivable", "type": "ASSET", "currency"
 
 POST http://localhost:8001/api/accounts x4 (parallel)
   -> 200
-  -> 201
+  -> 200
   -> 200
   -> 200
 
-POST http://localhost:8000/gl-accounts/sync x4 (parallel)
-  -> 200 [{"external_reference": "GL-1200", "erp_code": "1200", "status": "SYNC_PENDING", "attempts": 0, "last_error": null, "updated_at": "2026-10-29T19:19:22.404449Z"}]
-  -> 200 [{"external_reference": "GL-1200", "erp_code": "1200", "status": "SYNC_PENDING", "attempts": 0, "last_error": null, "updated_at": "2026-10-29T19:19:22.404449Z"}]
-  -> 200 [{"external_reference": "GL-1200", "erp_code": "1200", "status": "SYNC_PENDING", "attempts": 0, "last_error": null, "updated_at": "2026-10-29T19:19:22.404449Z"}]
-  -> 200 [{"external_reference": "GL-1200", "erp_code": "1200", "status": "SYNCED", "attempts": 1, "last_error": null, "updated_at": "2026-10-29T19:19:22.585960Z"}]
+POST http://localhost:8000/api/gl-accounts/sync x4 (parallel) {"external_reference": "SIM-GL-SYNC-450999"}
+  -> 202 operation_status=RECEIVED []
+  -> 202 operation_status=RECEIVED []
+  -> 201 operation_status=COMPLETED [{"external_reference": "GL-1200", "erp_code": "1200", "status": "SYNCED", "attempts": 1, "last_error": null, "updated_at": "2026-10-31T12:49:41.278411+00:00"}]
+  -> 202 operation_status=RECEIVED []
+
+POST http://localhost:8000/api/gl-accounts/sync again, same reference -> 200 operation_status=COMPLETED
 
 Result for GL-1200:
   ERP accounts             1
@@ -19,3 +21,5 @@ Result for GL-1200:
   sync status              SYNCED
 
 Expected 1 / 1 / 1 and SYNCED: PASS
+Expected one 201, the others 202 or 200 (got [201, 202, 202, 202]): PASS
+Expected the replay to be 200 with the 201's body: PASS

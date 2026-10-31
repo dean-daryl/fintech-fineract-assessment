@@ -105,13 +105,17 @@ evidence-compose-up:
 test-java:
 	@test -d "$(FINERACT_SRC)/.git" || { echo "test-java needs the Fineract clone at $(FINERACT_SRC)"; exit 1; }
 	set -o pipefail; cd $(FINERACT_SRC) && JAVA_HOME=$(JAVA_HOME_25) ./gradlew --console=plain \
-		:fineract-accounting:test --tests '*GLAccountExternalReferenceMatcherTest' --tests '*GLAccountSyncTest' \
-		:integration-tests:test --tests '*GLAccountExternalReferenceIntegrationTest' 2>&1 | tee $(CURDIR)/evidence/test-java.log
+		:fineract-accounting:test --rerun --tests '*GLAccountExternalReferenceMatcherTest' --tests '*GLAccountSyncTest' \
+		:integration-tests:test --rerun --tests '*GLAccountExternalReferenceIntegrationTest' 2>&1 | tee $(CURDIR)/evidence/test-java.log
+	set -o pipefail; { echo; echo "# JUnit results"; python3 scripts/junit_summary.py \
+		$(FINERACT_SRC)/fineract-accounting/build/test-results/test/TEST-*GLAccountExternalReferenceMatcherTest.xml \
+		$(FINERACT_SRC)/fineract-accounting/build/test-results/test/TEST-*GLAccountSyncTest.xml \
+		$(FINERACT_SRC)/integration-tests/build/test-results/test/TEST-*GLAccountExternalReferenceIntegrationTest.xml; } 2>&1 | tee -a evidence/test-java.log
 
 test-python:
-	cd mock-erp && uv run pytest -q
-	cd integration-service && uv run pytest -q
+	set -o pipefail; { echo "# mock-erp"; cd mock-erp && uv run pytest -v; } 2>&1 | tee evidence/test-python.log
+	set -o pipefail; { echo; echo "# integration-service"; cd integration-service && uv run pytest -v; } 2>&1 | tee -a evidence/test-python.log
 
 lint:
-	cd mock-erp && uv run ruff check && uv run ruff format --check && uv run mypy
-	cd integration-service && uv run ruff check && uv run ruff format --check && uv run mypy
+	set -o pipefail; { echo "# mock-erp"; cd mock-erp && uv run ruff check && uv run ruff format --check && uv run mypy; } 2>&1 | tee evidence/lint.log
+	set -o pipefail; { echo; echo "# integration-service"; cd integration-service && uv run ruff check && uv run ruff format --check && uv run mypy; } 2>&1 | tee -a evidence/lint.log

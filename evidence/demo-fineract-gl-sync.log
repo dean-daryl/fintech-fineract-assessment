@@ -1,13 +1,13 @@
 Fineract: https://localhost:8443/fineract-provider/api/v1
-Run id: 1793301532
+Run id: 1793451127
 
 1. externalReference is stored and unique
-  [PASS] first sync creates the account: HTTP 200, resourceId=1
-  [PASS] lookup by reference returns it: HTTP 200, id=1, externalReference=GL-DEMO-1793301532
+  [PASS] first sync creates the account: HTTP 200, resourceId=16
+  [PASS] lookup by reference returns it: HTTP 200, id=16, externalReference=GL-DEMO-1793451127
   [PASS] unknown reference is 404: HTTP 404, error.msg.resource.not.found
 
 2. same reference + identical payload returns the existing account
-  [PASS] repeat returns the same id: HTTP 200, resourceId=1 (first was 1)
+  [PASS] repeat returns the same id: HTTP 200, resourceId=16 (first was 16)
   [PASS] still one account with this reference: count=1
 
 3. same reference + different payload is rejected with 409
@@ -17,11 +17,11 @@ Run id: 1793301532
 
 4. protected by Fineract's permission model (SYNC_GLACCOUNT)
   [PASS] user without SYNC_GLACCOUNT is refused: HTTP 403, error.msg.not.authorized
-  [PASS] same user after granting SYNC_GLACCOUNT: HTTP 200, resourceId=2
+  [PASS] same user after granting SYNC_GLACCOUNT: HTTP 200, resourceId=17
 
 5. 10 parallel identical syncs create one account
   [PASS] every request succeeds: statuses=[200, 200, 200, 200, 200, 200, 200, 200, 200, 200]
-  [PASS] all return the same account: resourceIds=[3]
+  [PASS] all return the same account: resourceIds=[18]
   [PASS] one account in Fineract: count=1
 
 6. stock POST /glaccounts rejects externalReference

@@ -402,7 +402,7 @@ Partners identify clients and loans only by business ids. Fineract's numeric ids
 **Known weaknesses.**
 - Fees, penalties, waivers, write-offs and accruals have no mapping; they raise. The product has none of them (D-010, D-012).
 - The account codes are constants matching D-011. If the product's GL mappings change in Fineract, this module must change with them. Reading the product's mappings at runtime would remove that coupling; not built.
-- Fineract 1.16.1 lists an `Accrual` transaction on a loan even under cash accounting (seen live: 500,799 RWF, no `externalId`, on a paid-off SAF loan). The mapping never sees it: it only maps the transaction an operation created, looked up by that operation's `external_reference`. It would raise if it were given one.
+- Fineract 1.16.1 books an `Accrual` transaction on a loan even under cash accounting: 500,799 RWF, the loan's whole scheduled interest, with no `externalId`, dated at disbursement. Cause: the global configuration `allow-cash-and-non-cash-accrual` is on by default on a fresh tenant ("accrual transactions are created at disbursement for None, Cash, and Upfront Accrual accounting types (legacy behavior)"; `LoanDisbursementService`, `LoanAccrualsProcessingServiceImpl`). Bootstrap leaves it at the default. Under cash accounting Fineract posts no journal entry for it, and it doesn't change the loan's outstanding balance, which already includes scheduled interest. The mapping never sees it: it only maps the transaction an operation created, looked up by that operation's `external_reference`. It would raise if it were given one. Reconciliation skips it, because it keys on disbursements and repayments only (D-024).
 
 ## D-022: ERP posting step
 
@@ -652,10 +652,10 @@ If Fineract reprocesses later repayments after a reversal and changes their spli
 **Decision.** A partner can read any request it has sent by its `external_reference`: GL sync, client creation, loan application, approval, disbursement, repayment or ERP repair. The response is the operation row, never a live call to Fineract or the ERP:
 
 ```json
-{"external_reference": "SIM-445908-REPAY-1", "operation_type": "REPAY_LOAN", "operation_status": "COMPLETED", "attempts": 0,
+{"external_reference": "SIM-450991-REPAY-1", "operation_type": "REPAY_LOAN", "operation_status": "COMPLETED", "attempts": 0,
  "created_at": "...", "updated_at": "...",
- "result": {"loan_reference": "LN-2026-000022", "amount": 500000, "principal_portion": 383400, "interest_portion": 116600,
-            "outstanding_after": 4616600, "erp_transaction_id": "JE-000097", "operation_status": "COMPLETED", ...}}
+ "result": {"loan_reference": "LN-2026-000001", "amount": 500000, "principal_portion": 383400, "interest_portion": 116600,
+            "outstanding_after": 4616600, "erp_transaction_id": "JE-000002", "operation_status": "COMPLETED", ...}}
 ```
 
 - **`result`** is the body the partner got (or will get on replay), with the current `operation_status` on top. For a finished operation it equals the stored response, which the lifecycle simulation checks against the original POST. For one still in progress, it carries what is known so far, e.g. Fineract's split while the ERP posting is pending. A failed operation shows its `error` and `code`.

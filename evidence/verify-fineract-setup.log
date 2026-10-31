@@ -1,0 +1,34 @@
+As integration-api: configuration read-back
+  PASS  office 'Kigali Main Office'  (externalId=OFFICE-KGL-MAIN)
+  PASS  loan product SAF readable  (GET /loanproducts -> 200)
+        currency         RWF
+        decimals         0
+        interest         18% Per year
+        repayments       12 x every 1 Months
+        interest method  Declining Balance
+        amortization     Equal installments
+        multi-disburse   False
+        accounting       CASH BASED
+  PASS  product terms: RWF, 18%/year, 12 monthly, single disbursement, cash
+  PASS  fundSource             -> GL-1100  (1100 Cash at Bank)
+  PASS  loanPortfolio          -> GL-1200  (1200 Loan Receivable)
+  PASS  transfersInSuspense    -> GL-1300  (1300 Transfers in Suspense)
+  PASS  overpaymentLiability   -> GL-2100  (2100 Loan Overpayments)
+  PASS  interestOnLoan         -> GL-4100  (4100 Interest Income on Loans)
+  PASS  incomeFromFee          -> GL-4200  (4200 Fee Income)
+  PASS  incomeFromPenalty      -> GL-4300  (4300 Penalty Income)
+  PASS  incomeFromRecovery     -> GL-4400  (4400 Recoveries Income)
+  PASS  writeOff               -> GL-5100  (5100 Loan Losses Written Off)
+
+As integration-api: admin actions must be refused (403)
+  PASS  POST /offices  (403 error.msg.not.authorized)
+  PASS  POST /loanproducts  (403 error.msg.not.authorized)
+  PASS  POST /users  (403 error.msg.not.authorized)
+  PASS  POST /roles  (403 error.msg.not.authorized)
+  PASS  POST /glaccounts  (403 error.msg.not.authorized)
+  PASS  POST /journalentries  (403 error.msg.not.authorized)
+
+As integration-api: known upstream gap (not counted)
+  GAP   PUT /currencies  (404 error.msg.resource.not.found; reached the handler: not authorized by Fineract)
+
+18/18 checks passed: PASS

@@ -1,0 +1,18 @@
+Health
+  Fineract health                                    up
+  Mock ERP health                                    up
+  Integration Service health                         up
+Organisation
+  office 'Kigali Main Office'                        exists, unchanged
+  currency RWF                                       exists, unchanged
+API user
+  role INTEGRATION_API                               exists, unchanged
+  user integration-api                               exists, unchanged
+  user integration-api login                         ok
+Chart of accounts
+  ERP chart of accounts (9 accounts)                 seeded by the ERP
+  GL sync (9 accounts)                               all SYNCED
+Loan product
+  loan product SAF 'SME Asset Finance'               exists, unchanged
+
+Bootstrap complete

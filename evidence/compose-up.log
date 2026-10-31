@@ -1,18 +1,18 @@
 # make up / docker compose up evidence
-# captured: 2026-10-29T19:18:48Z
+# captured: 2026-10-31T12:49:36Z
 
 $ docker compose ps
 SERVICE               IMAGE                                     STATUS                        PORTS
 db                    postgres:18.3                             Up About a minute (healthy)   0.0.0.0:5433->5432/tcp
 fineract              fineract-custom:local                     Up About a minute (healthy)   0.0.0.0:8443->8443/tcp
-integration-service   fineract-assessment-integration-service   Up 19 seconds (healthy)       0.0.0.0:8000->8000/tcp
+integration-service   fineract-assessment-integration-service   Up 20 seconds (healthy)       0.0.0.0:8000->8000/tcp
 mock-erp              fineract-assessment-mock-erp              Up About a minute (healthy)   0.0.0.0:8001->8000/tcp
 
 $ curl -sk https://localhost:8443/fineract-provider/actuator/health
 {"groups":["liveness","readiness"],"status":"UP"}
 
 $ docker compose logs fineract | grep "Started ServerApplication"
-2026-10-29 19:18:24.558 - INFO 1  [        default] --- [           main] org.apache.fineract.ServerApplication    : Started ServerApplication in 81.634 seconds (process running for 82.289)
+2026-10-31 12:49:12.422 - INFO 1  [        default] --- [           main] org.apache.fineract.ServerApplication    : Started ServerApplication in 77.478 seconds (process running for 78.351)
 $ docker compose logs fineract | grep -c " ERROR "
 0
 

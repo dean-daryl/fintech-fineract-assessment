@@ -1,5 +1,47 @@
 # DECISIONS
 
+Every design choice, assumption and known weakness, recorded as the work went. Each decision has a number (D-001…) that the other docs cite.
+
+## Summary
+
+The brief asks DECISIONS.md to cover these topics. Each line points to the decision with the detail.
+
+| Topic | Decision | Where |
+|---|---|---|
+| **Fineract customization mechanism** | A new command, `POST /glaccounts/sync`, in Fineract's own command pipeline. It isn't a separate controller or a wrapper, so Fineract's permission check, audit log and transaction boundary apply unchanged. The rules are enforced in the write service, backed by a unique column added by Liquibase | D-007 |
+| **Sync vs async** | Partner calls are synchronous: the request runs Fineract and then the ERP inline and answers 201 with the result. When a step can't finish (an outage, a timeout), the request answers 202, and the operation finishes in the background from the operations table. There is no queue or worker; one partner and low volume don't need one | D-014, D-023, D-029 |
+| **Database constraints** | Integration DB: unique `(operation_type, external_reference)`, one disbursement slot per loan, unique `client_uid`, `loan_reference` and ERP code. ERP: unique account code and reference, unique journal entry reference, a check constraint on each line. Fineract: unique GL `external_reference` (our patch), and its stock unique `externalId` on clients, loans and transactions | D-014, D-015, D-019, D-020, D-026 |
+| **Idempotency** | The operations row is claimed with `INSERT … ON CONFLICT DO NOTHING`, and the payload hash decides the outcome: replay 200, 202 in progress, or 409. Nothing is kept in memory. The ERP is idempotent on its own reference too, and Fineract on `externalId` | D-014, D-020, D-026 |
+| **Retries** | Inline: 3 attempts. Deferred: 5 s doubling to 5 min, with jitter, up to 10 attempts. A recovery sweep (`FOR UPDATE SKIP LOCKED` plus a lease) runs at startup, every 30 s, and on `POST /admin/recover`. A timeout is followed by a lookup by external reference, never a blind resend | D-008, D-014, D-023 |
+| **Partial failure** | The state is saved before each call to the next system. If Fineract succeeded and the ERP didn't, the operation stays `ERP_PENDING` and the saved journal entry is posted later, after a lookup. An outcome that stays unknown becomes `NEEDS_RECONCILIATION`, which reconciliation reports and repairs explicitly | D-022, D-023, D-024 |
+| **Concurrency** | Five layers stop a second disbursement; the last line of defence is Fineract's loan state. Fineract's concurrency 409 is treated as retryable | D-026 |
+| **Accounting** | Cash-based. Journal entries use Fineract's own principal/interest split, never our arithmetic | D-010, D-021 |
+| **API contract** | API-key auth, one error format, correlation ids, no Fineract ids or Fineract text in responses, any request readable by its reference | D-015, D-018, D-027, D-028 |
+| **Observability** | JSON logs with the brief's fields, plus "What happened to FIN-2026-000001?" worked through from one API call and the logs | D-030 |
+
+### What was not built, and why
+
+| Not built | Why |
+|---|---|
+| Message broker, worker, Redis | The operations table already is the queue and the lock. A broker would add a second source of truth for operation state (D-029) |
+| Fees, penalties, write-off, reschedule, undo endpoints | Not in Tier 1 or 2. The product has no charges, and the accounting mapping raises on transaction types it doesn't know (D-021) |
+| GL account updates and deletes | The brief makes sync create-only. A changed ERP account becomes `CONFLICT` (D-019) |
+| Accrual accounting | Cash is enough to show correct balanced entries. Accrual would add journal entries that no partner call causes (D-010) |
+| Per-partner identity, key rotation, OAuth | One partner. A single key per route group meets "authentication" (D-027) |
+| Database migrations (Alembic) | Tables are created at startup on an empty database. A real service would use migrations (D-008) |
+| Metrics, tracing, scheduled reconciliation, dead-letter view, webhooks | Stretch items. `NEEDS_RECONCILIATION` plus the reconciliation report covers what a dead-letter view would show (D-024) |
+| Authentication on the Mock ERP | Internal only; partners can't reach it through the integration API (D-020) |
+
+### Main known weaknesses
+
+- **Overpayment race.** Concurrent repayments that each pass the live balance check can together overpay a loan. A per-loan lock would close it (D-017).
+- **Sustained contention.** Under sustained contention on one loan, Fineract can return a concurrency 409 on every attempt. The operation then ends `FAILED` and the partner must resend (D-026).
+- **Slow crash recovery.** After a crash, recovery waits for the 60 s lease (D-023).
+- **Stale journal entries.** The journal entry is a snapshot at `FINERACT_DONE`. If Fineract later reprocesses a loan, reconciliation shows the difference; it isn't corrected automatically (D-022, D-024).
+- **Local-only settings.** TLS verification to Fineract is off, because Fineract's image has a self-signed certificate. The stack uses one PostgreSQL server for all three databases, and there are no migrations (D-003, D-008).
+- **Upstream Fineract gap.** Fineract 1.16.1 doesn't authorize `PUT /currencies` (D-013).
+- **Single partner key.** There's one partner key, and nothing records which partner sent a request (D-027).
+
 ## D-001: Fineract 1.16.1
 
 Pinned to tag `1.16.1` (commit `c643dab3`), the latest release when work started (2026-10-28). The build also checks the commit hash, so a re-pointed tag fails the build instead of silently changing the source.
@@ -223,7 +265,7 @@ FINERACT_DONE -> COMPLETED   only for operation types with no ERP step
 
 - An operation type with no ERP step (client creation) goes `FINERACT_DONE -> COMPLETED`; one with an ERP step must go through `ERP_PENDING`. This is checked per type, so a loan repayment can never skip its journal entry.
 - `FAILED` means nothing happened downstream. `FINERACT_PENDING -> NEEDS_RECONCILIATION` is for when Fineract's outcome stays unknown after every attempt (a timeout, then lookups that also fail).
-- The three finished statuses have no transitions out. Resolving `NEEDS_RECONCILIATION` belongs to the reconciliation work, not built yet.
+- The three finished statuses have no transitions out. `NEEDS_RECONCILIATION` is resolved by the reconciliation report and its explicit repair (D-024), not by changing the operation's status.
 
 **Lease.** The request that creates the row also takes a lease (`locked_until`, `operation_lease_seconds`). While the lease holds, the recovery sweep skips the row, so the request in flight and the sweep never execute the same operation. A deferred retry releases the lease and sets `next_attempt_at` with the same backoff as GL sync (`domain/retry.py`: 5s doubling to 5 min, plus jitter). The sweep claims due rows with `FOR UPDATE SKIP LOCKED` and takes a fresh lease.
 
@@ -668,4 +710,64 @@ If Fineract reprocesses later repayments after a reversal and changes their spli
 
 **Known weaknesses.**
 - No list or search by loan; `GET /api/loans/{loan_reference}` lists a loan's transactions live from Fineract.
+
+## D-029: FastAPI for both Python services, and no queue or worker
+
+**FastAPI** for the Mock ERP and the Integration Service. The brief allows any framework but asks for a justification.
+- **Validation and OpenAPI from the same type hints.** The brief requires type hints, validation and OpenAPI docs. Pydantic models give typed request and response bodies, 422 on bad input, and the `/docs` page, with no extra code.
+- **Dependencies and exception handlers.** API-key auth is one dependency per router group, and the error format is three handlers (D-027).
+- **Thin routes.** Routes stay thin over plain services and pure domain functions, which are unit-tested without the framework. The API contract tests drive the app over HTTP with `TestClient` and no database.
+- **Synchronous handlers.** Route handlers are plain `def`. FastAPI runs them in a thread pool, and the Fineract and ERP clients are synchronous `httpx` clients. Every request blocks on at most two downstream systems, and SQLAlchemy sessions are synchronous, so `async` would add complexity without throughput the brief needs. The one background task, the recovery timer, runs the synchronous sweep with `asyncio.to_thread`.
+- **Alternatives.** Django REST Framework brings an ORM and admin we don't need, and its own migrations. Flask needs separate libraries for validation and OpenAPI.
+
+**No queue, worker or Redis.** These are optional in the brief, and its rule is "no message broker or separate worker".
+- **The operations table already does the job.** It is the idempotency store, the state machine's record and the retry queue: `next_attempt_at`, a lease, and `FOR UPDATE SKIP LOCKED` (D-014).
+- **A broker would add a second copy of state.** That would mean another source of truth for "where is this operation?", and a new failure mode (the message and the row disagree) for no gain at this volume.
+- **Recovery runs in-process.** It runs at startup, from a 30 s timer, and on `POST /admin/recover` (D-023). It survives a crash because the state is in the database, not in the process (S-J5).
+- **When one would be needed.** The lease and `SKIP LOCKED` are built for concurrent sweeps, so several service instances should not process the same row twice; this is not tested with more than one instance. A worker would be worth adding for long-running or high-volume work, not for correctness.
+
+## D-030: Observability: "What happened to FIN-2026-000001?"
+
+**Logs.** Every log line is one JSON object (`app/logs.py`): `timestamp`, `level`, `logger`, `message`, `correlation_id`, plus the context fields that apply. Those are `external_reference`, `client_uid`, `loan_reference`, `fineract_transaction_id`, `erp_transaction_id` and `status`.
+- **Correlation id.** It comes from the request's `X-Correlation-ID` (or a new UUID), is held in a context variable, and is returned in the response header.
+- **One helper for the context fields.** Every operation log line gets them from `operation_log_fields`, so the "received", "status changed", "deferred" and "attempt failed" lines all carry the same fields. `fineract_transaction_id` is Fineract's transaction id, only on disbursements and repayments. Logs are internal, so Fineract ids may appear in them; they never appear in the API (rule 6).
+- **The `httpx` lines.** One per call to Fineract or the ERP, they carry the same `correlation_id`, so one request's whole trail can be followed across systems.
+
+**The walkthrough.** `make evidence-observability` (`scripts/trace_reference.py`, `evidence/observability.log`) sets up a loan and sends repayment `FIN-2026-000001`, then answers the question the way an on-call engineer would. The references are fixed, so it can be re-run: a second run replays every step.
+
+1. **One API call: `GET /api/transactions/FIN-2026-000001`** (D-028). It answers "what happened": a `REPAY_LOAN`, `COMPLETED`, 0 retries, on loan `LN-2026-000008`. Fineract split it into 383,400 principal and 116,600 interest, leaving 4,616,600 outstanding, and the ERP entry is `JE-000051`. A partner can make this call too.
+
+2. **The logs for that reference.** These show "when, and through which states". From `docker compose logs integration-service`, filter on `external_reference == "FIN-2026-000001"` (e.g. `| jq 'select(.external_reference == "FIN-2026-000001")'`). This also finds recovery passes, which run under a different `correlation_id`:
+
+```json
+{"timestamp": "2026-10-31T13:20:29.231544+00:00", "level": "INFO", "message": "Operation received", "correlation_id": "corr-4197c6d1-7236-400c-9150-dd5d5e9a5762", "external_reference": "FIN-2026-000001", "loan_reference": "LN-2026-000008", "status": "RECEIVED"}
+{"timestamp": "2026-10-31T13:20:29.392354+00:00", "level": "INFO", "message": "Operation status changed", "correlation_id": "corr-4197c6d1-7236-400c-9150-dd5d5e9a5762", "external_reference": "FIN-2026-000001", "loan_reference": "LN-2026-000008", "status": "FINERACT_PENDING"}
+{"timestamp": "2026-10-31T13:20:29.683315+00:00", "level": "INFO", "message": "Operation status changed", "correlation_id": "corr-4197c6d1-7236-400c-9150-dd5d5e9a5762", "external_reference": "FIN-2026-000001", "loan_reference": "LN-2026-000008", "fineract_transaction_id": 43, "status": "FINERACT_DONE"}
+{"timestamp": "2026-10-31T13:20:29.685030+00:00", "level": "INFO", "message": "Operation status changed", "correlation_id": "corr-4197c6d1-7236-400c-9150-dd5d5e9a5762", "external_reference": "FIN-2026-000001", "loan_reference": "LN-2026-000008", "fineract_transaction_id": 43, "status": "ERP_PENDING"}
+{"timestamp": "2026-10-31T13:20:29.697656+00:00", "level": "INFO", "message": "Operation status changed", "correlation_id": "corr-4197c6d1-7236-400c-9150-dd5d5e9a5762", "external_reference": "FIN-2026-000001", "loan_reference": "LN-2026-000008", "fineract_transaction_id": 43, "erp_transaction_id": "JE-000051", "status": "COMPLETED"}
+```
+
+3. **The full request, by its `correlation_id`.** This shows "what each system was asked". It adds the calls in order: Fineract's loan read for the balance check, the repayment POST, the lookup of the new transaction by `externalId`, then the ERP POST:
+
+```json
+{"message": "HTTP Request: GET https://fineract:8443/fineract-provider/api/v1/loans/external-id/LN-2026-000008?associations=transactions \"HTTP/1.1 200 \"", "correlation_id": "corr-4197c6d1-…"}
+{"message": "HTTP Request: POST https://fineract:8443/fineract-provider/api/v1/loans/8/transactions?command=repayment \"HTTP/1.1 200 \"", "correlation_id": "corr-4197c6d1-…"}
+{"message": "HTTP Request: GET https://fineract:8443/fineract-provider/api/v1/loans/external-id/LN-2026-000008/transactions/external-id/FIN-2026-000001 \"HTTP/1.1 200 \"", "correlation_id": "corr-4197c6d1-…"}
+{"message": "HTTP Request: POST http://mock-erp:8000/api/journal-entries \"HTTP/1.1 201 Created\"", "correlation_id": "corr-4197c6d1-…"}
+```
+
+4. **To confirm in each system**, with the ids from steps 1–2:
+   - Fineract: `GET /loans/external-id/LN-2026-000008/transactions/external-id/FIN-2026-000001`.
+   - ERP: `GET /api/journal-entries/FIN-2026-000001`, which returns `JE-000051`.
+   - Operators: `GET /admin/operations/FIN-2026-000001` shows the retry state (attempts, `last_error`, lease) that the partner API hides.
+
+**How other outcomes would read.**
+- **Retry.** A retry shows `Fineract attempt failed` or `ERP attempt failed`, then `Operation deferred`.
+- **Recovery.** A recovery pass shows the same reference under a new `correlation_id`.
+- **Crash.** A crash shows the request's lines stopping at `ERP_PENDING`, then a recovery pass completing it. `make simulate-failures` prints the request's trail for the two timeout scenarios (S-J3, S-J4): the `Fault fired` and `Fineract attempt failed` lines, then the lookup instead of a resend.
+
+**Known weaknesses.**
+- Logs go to stdout only (`docker compose logs`), with no retention or search beyond that.
+- The Mock ERP's logs are not structured JSON. The ERP side of a trail is the integration service's `httpx` line plus the ERP entry itself.
+- `client_uid` is only on operations whose payload has it (client creation, loan application). A repayment is tied to its client through `loan_reference`.
 

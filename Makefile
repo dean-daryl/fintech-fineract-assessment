@@ -9,7 +9,7 @@ FINERACT_TAG := $(shell sed -n 's/^ARG FINERACT_TAG=//p' fineract-customization/
 PATCH_DIR := $(CURDIR)/fineract-customization/patch
 JAVA_HOME_25 ?= $(shell /usr/libexec/java_home -v 25 2>/dev/null)
 
-.PHONY: build-fineract patches up down reset logs ps bootstrap verify-fineract-setup evidence-bootstrap simulate-gl-sync simulate-erp simulate-loan-lifecycle simulate-concurrency simulate-failures simulate-reconciliation simulate-gl-reconciliation demo-fineract-gl evidence-compose-up test-java test-python lint
+.PHONY: build-fineract patches up down reset logs ps bootstrap verify-fineract-setup evidence-bootstrap simulate-gl-sync simulate-erp simulate-loan-lifecycle simulate-concurrency simulate-failures simulate-reconciliation simulate-gl-reconciliation evidence-observability demo-fineract-gl evidence-compose-up test-java test-python lint
 
 # Builds what changed and waits until every service reports healthy.
 # Fineract is built through build-fineract (same builder and cache as before), not
@@ -93,6 +93,10 @@ simulate-reconciliation:
 
 simulate-gl-reconciliation:
 	set -o pipefail; set -a; . ./.env; set +a; python3 scripts/simulate_gl_reconciliation.py 2>&1 | tee evidence/simulate-gl-reconciliation.log
+
+# Answers "What happened to FIN-2026-000001?" from GET /api/transactions/{ref} and the service's JSON logs.
+evidence-observability:
+	set -o pipefail; set -a; . ./.env; set +a; python3 scripts/trace_reference.py 2>&1 | tee evidence/observability.log
 
 demo-fineract-gl:
 	set -o pipefail; python3 scripts/demo_fineract_gl_sync.py 2>&1 | tee evidence/demo-fineract-gl-sync.log

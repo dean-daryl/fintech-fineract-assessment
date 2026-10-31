@@ -1,0 +1,58 @@
+Setup (fixed references; a re-run replays each step)
+  POST /api/clients OBS-CLIENT -> 201 COMPLETED
+  POST /api/loans OBS-APPLY -> 201 COMPLETED
+  POST /api/loans/LN-2026-000008/approval OBS-APPROVE -> 201 COMPLETED
+  POST /api/loans/LN-2026-000008/disbursement OBS-DISBURSE -> 201 COMPLETED
+
+The partner's request: POST /api/loans/LN-2026-000008/repayments {"external_reference": "FIN-2026-000001", "amount": 500000, "transaction_date": "2026-05-01"}
+  X-Correlation-ID: corr-4197c6d1-7236-400c-9150-dd5d5e9a5762
+  -> 201 {"external_reference": "FIN-2026-000001", "loan_reference": "LN-2026-000008", "amount": 500000, "operation_status": "COMPLETED", "interest_portion": 116600, "transaction_date": "2026-05-01", "outstanding_after": 4616600, "principal_portion": 383400, "erp_transaction_id": "JE-000051"}
+
+What happened to FIN-2026-000001?
+
+1. One API call: GET /api/transactions/FIN-2026-000001
+  -> 200
+  {
+    "external_reference": "FIN-2026-000001",
+    "operation_type": "REPAY_LOAN",
+    "operation_status": "COMPLETED",
+    "attempts": 0,
+    "created_at": "2026-10-31T13:20:29.230894Z",
+    "updated_at": "2026-10-31T13:20:29.695418Z",
+    "result": {
+      "amount": 500000,
+      "loan_reference": "LN-2026-000008",
+      "interest_portion": 116600,
+      "operation_status": "COMPLETED",
+      "transaction_date": "2026-05-01",
+      "outstanding_after": 4616600,
+      "principal_portion": 383400,
+      "erp_transaction_id": "JE-000051",
+      "external_reference": "FIN-2026-000001"
+    }
+  }
+
+2. The logs for this reference: docker compose logs integration-service | jq 'select(.external_reference == "FIN-2026-000001")'
+  5 lines, from every request and recovery pass that touched it:
+  {"timestamp": "2026-10-31T13:20:29.231544+00:00", "level": "INFO", "message": "Operation received", "correlation_id": "corr-4197c6d1-7236-400c-9150-dd5d5e9a5762", "external_reference": "FIN-2026-000001", "loan_reference": "LN-2026-000008", "status": "RECEIVED"}
+  {"timestamp": "2026-10-31T13:20:29.392354+00:00", "level": "INFO", "message": "Operation status changed", "correlation_id": "corr-4197c6d1-7236-400c-9150-dd5d5e9a5762", "external_reference": "FIN-2026-000001", "loan_reference": "LN-2026-000008", "status": "FINERACT_PENDING"}
+  {"timestamp": "2026-10-31T13:20:29.683315+00:00", "level": "INFO", "message": "Operation status changed", "correlation_id": "corr-4197c6d1-7236-400c-9150-dd5d5e9a5762", "external_reference": "FIN-2026-000001", "loan_reference": "LN-2026-000008", "fineract_transaction_id": 43, "status": "FINERACT_DONE"}
+  {"timestamp": "2026-10-31T13:20:29.685030+00:00", "level": "INFO", "message": "Operation status changed", "correlation_id": "corr-4197c6d1-7236-400c-9150-dd5d5e9a5762", "external_reference": "FIN-2026-000001", "loan_reference": "LN-2026-000008", "fineract_transaction_id": 43, "status": "ERP_PENDING"}
+  {"timestamp": "2026-10-31T13:20:29.697656+00:00", "level": "INFO", "message": "Operation status changed", "correlation_id": "corr-4197c6d1-7236-400c-9150-dd5d5e9a5762", "external_reference": "FIN-2026-000001", "loan_reference": "LN-2026-000008", "fineract_transaction_id": 43, "erp_transaction_id": "JE-000051", "status": "COMPLETED"}
+
+3. The full trail of each request: jq 'select(.correlation_id == "...")', including the calls to Fineract and the ERP
+
+  correlation_id corr-4197c6d1-7236-400c-9150-dd5d5e9a5762
+  {"timestamp": "2026-10-31T13:20:29.231544+00:00", "level": "INFO", "message": "Operation received", "correlation_id": "corr-4197c6d1-7236-400c-9150-dd5d5e9a5762", "external_reference": "FIN-2026-000001", "loan_reference": "LN-2026-000008", "status": "RECEIVED"}
+  {"timestamp": "2026-10-31T13:20:29.388986+00:00", "level": "INFO", "message": "HTTP Request: GET https://fineract:8443/fineract-provider/api/v1/loans/external-id/LN-2026-000008?associations=transactions \"HTTP/1.1 200 \"", "correlation_id": "corr-4197c6d1-7236-400c-9150-dd5d5e9a5762"}
+  {"timestamp": "2026-10-31T13:20:29.392354+00:00", "level": "INFO", "message": "Operation status changed", "correlation_id": "corr-4197c6d1-7236-400c-9150-dd5d5e9a5762", "external_reference": "FIN-2026-000001", "loan_reference": "LN-2026-000008", "status": "FINERACT_PENDING"}
+  {"timestamp": "2026-10-31T13:20:29.568274+00:00", "level": "INFO", "message": "HTTP Request: POST https://fineract:8443/fineract-provider/api/v1/loans/8/transactions?command=repayment \"HTTP/1.1 200 \"", "correlation_id": "corr-4197c6d1-7236-400c-9150-dd5d5e9a5762"}
+  {"timestamp": "2026-10-31T13:20:29.680500+00:00", "level": "INFO", "message": "HTTP Request: GET https://fineract:8443/fineract-provider/api/v1/loans/external-id/LN-2026-000008/transactions/external-id/FIN-2026-000001 \"HTTP/1.1 200 \"", "correlation_id": "corr-4197c6d1-7236-400c-9150-dd5d5e9a5762"}
+  {"timestamp": "2026-10-31T13:20:29.683315+00:00", "level": "INFO", "message": "Operation status changed", "correlation_id": "corr-4197c6d1-7236-400c-9150-dd5d5e9a5762", "external_reference": "FIN-2026-000001", "loan_reference": "LN-2026-000008", "fineract_transaction_id": 43, "status": "FINERACT_DONE"}
+  {"timestamp": "2026-10-31T13:20:29.685030+00:00", "level": "INFO", "message": "Operation status changed", "correlation_id": "corr-4197c6d1-7236-400c-9150-dd5d5e9a5762", "external_reference": "FIN-2026-000001", "loan_reference": "LN-2026-000008", "fineract_transaction_id": 43, "status": "ERP_PENDING"}
+  {"timestamp": "2026-10-31T13:20:29.694712+00:00", "level": "INFO", "message": "HTTP Request: POST http://mock-erp:8000/api/journal-entries \"HTTP/1.1 201 Created\"", "correlation_id": "corr-4197c6d1-7236-400c-9150-dd5d5e9a5762"}
+  {"timestamp": "2026-10-31T13:20:29.697656+00:00", "level": "INFO", "message": "Operation status changed", "correlation_id": "corr-4197c6d1-7236-400c-9150-dd5d5e9a5762", "external_reference": "FIN-2026-000001", "loan_reference": "LN-2026-000008", "fineract_transaction_id": 43, "erp_transaction_id": "JE-000051", "status": "COMPLETED"}
+
+log fields seen for FIN-2026-000001: ['correlation_id', 'erp_transaction_id', 'external_reference', 'fineract_transaction_id', 'level', 'loan_reference', 'message', 'status', 'timestamp']
+required fields missing: none
+PASS

@@ -140,4 +140,19 @@ class OperationStore:
 
     @staticmethod
     def _log_fields(row: Operation) -> dict[str, Any]:
-        return {"external_reference": row.external_reference, "erp_transaction_id": row.erp_transaction_id, "status": row.status}
+        return operation_log_fields(row)
+
+
+MONEY_OPERATIONS = frozenset({OperationType.DISBURSE_LOAN.value, OperationType.REPAY_LOAN.value})
+
+
+def operation_log_fields(row: Operation) -> dict[str, Any]:
+    payload = row.payload or {}
+    return {
+        "external_reference": row.external_reference,
+        "client_uid": payload.get("client_uid"),
+        "loan_reference": payload.get("loan_reference"),
+        "fineract_transaction_id": row.fineract_resource_id if row.operation_type in MONEY_OPERATIONS else None,
+        "erp_transaction_id": row.erp_transaction_id,
+        "status": row.status,
+    }

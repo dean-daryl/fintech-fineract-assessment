@@ -14,7 +14,7 @@ from app.domain.states import OperationStatus, OperationType, has_erp_step
 from app.errors import error_body
 from app.faults import FaultInjector, FaultPoint
 from app.models import Operation
-from app.services.operations import OperationStore
+from app.services.operations import OperationStore, operation_log_fields
 
 log = logging.getLogger(__name__)
 
@@ -327,10 +327,4 @@ class OperationPipeline:
 
 
 def _log_fields(operation: Operation) -> dict[str, Any]:
-    return {
-        "external_reference": operation.external_reference,
-        "client_uid": operation.payload.get("client_uid"),
-        "loan_reference": operation.payload.get("loan_reference"),
-        "erp_transaction_id": operation.erp_transaction_id,
-        "status": operation.status,
-    }
+    return operation_log_fields(operation)

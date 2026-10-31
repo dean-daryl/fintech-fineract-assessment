@@ -2,7 +2,7 @@
 
 Every scenario is re-runnable against a running stack (`make up`). Logs are in `evidence/`.
 
-The logs listed here come from one pass on an empty stack, on 2026-10-31: `make reset && make up`, then `make evidence-compose-up`, `make evidence-bootstrap`, `make simulate-loan-lifecycle`, `simulate-gl-sync`, `simulate-erp`, `simulate-concurrency`, `simulate-failures`, `simulate-reconciliation`, `simulate-gl-reconciliation`, `make demo-fineract-gl`, `make test-java`, `make test-python` and `make lint`, in that order. All of them exited 0. Build logs (`build-*.log`) and `demo-gl-sync-failures.log` come from earlier runs, as noted where they're cited.
+The logs listed here come from one pass on an empty stack, on 2026-10-31: `make reset && make up`, then `make evidence-compose-up`, `make evidence-bootstrap`, `make simulate-loan-lifecycle`, `simulate-gl-sync`, `simulate-erp`, `simulate-concurrency`, `simulate-failures`, `simulate-reconciliation`, `simulate-gl-reconciliation`, `make demo-fineract-gl`, `make test-java`, `make test-python` and `make lint`, in that order. All of them exited 0. Build logs (`build-*.log`) and `demo-gl-sync-failures.log` come from earlier runs, as noted where they're cited. `observability.log` was captured later on the same stack (S-O1), and `test-python.log` and `lint.log` were regenerated after the last code changes.
 
 ## Part A evidence at a glance
 
@@ -102,6 +102,24 @@ The logs listed here come from one pass on an empty stack, on 2026-10-31: `make 
 - **Actual:** 13/13 checks PASS. The 10 parallel posts returned `[201, 200 ×9]` with one body (`JE-000006`); 1300 rose and 1100 fell by 250,000 once. The changed amount got 409, each invalid entry 422 and then 404, and the offsetting entry returned both balances to where they started.
 - **ERP state:** two `SIM-ERP-` entries per run; balances unchanged overall. **Fineract / integration state:** not involved.
 - **Explanation:** the unique constraint on `journal_entries.external_reference` decides which concurrent request inserts; the others read the stored entry and compare the request hash. Invalid entries fail validation before anything is written.
+
+## S-O1: What happened to FIN-2026-000001? (observability)
+
+- **Command:** `make evidence-observability` (`evidence/observability.log`). This was run on the same stack after the main pass, once the log fields were unified (DECISIONS.md D-030).
+- **Initial state:** a client `SME-900001` and loan `LN-2026-000008`, set up with fixed references (`OBS-*`), so a re-run replays them.
+- **Request:** `POST /api/loans/LN-2026-000008/repayments` with `FIN-2026-000001`, 500,000 RWF, and a known `X-Correlation-ID`.
+- **Response:** 201 with Fineract's split (383,400 principal, 116,600 interest) and `erp_transaction_id` `JE-000051`.
+- **Fineract / ERP / integration state:**
+  - The integration service has one `REPAY_LOAN` operation, `COMPLETED`.
+  - Fineract has one repayment with `externalId` `FIN-2026-000001`.
+  - The ERP has `JE-000051`.
+- **Expected:** `GET /api/transactions/FIN-2026-000001` answers what happened. The logs filtered by `external_reference` show every state change, and filtered by `correlation_id` the calls to Fineract and the ERP. The lines carry `correlation_id`, `external_reference`, `loan_reference`, `fineract_transaction_id`, `erp_transaction_id`, `status` and `timestamp`.
+- **Actual:** PASS.
+  - The transactions call returned 200 `COMPLETED` with the result above.
+  - 5 log lines for the reference: `RECEIVED → FINERACT_PENDING → FINERACT_DONE → ERP_PENDING → COMPLETED`, with `fineract_transaction_id` from `FINERACT_DONE` on and `erp_transaction_id` on `COMPLETED`.
+  - The request's trail shows Fineract's loan read, the repayment POST, the lookup by `externalId`, and the ERP POST.
+  - No required field is missing.
+- **Explanation:** see DECISIONS.md D-030 for the walkthrough.
 
 ## Part I evidence at a glance
 

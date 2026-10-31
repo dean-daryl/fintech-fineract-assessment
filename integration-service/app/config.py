@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings
 
 
@@ -10,6 +11,8 @@ class Settings(BaseSettings):
     fineract_tenant: str = "default"
     fineract_username: str
     fineract_password: str
+    partner_api_key: SecretStr
+    admin_api_key: SecretStr
     fineract_tls_verify: bool = True
     fineract_timeout_seconds: float = 10.0
     erp_timeout_seconds: float = 10.0

@@ -71,7 +71,7 @@ evidence-bootstrap:
 	  python3 scripts/verify_fineract_setup.py 2>&1 | tee evidence/verify-fineract-setup.log
 
 simulate-gl-sync:
-	set -o pipefail; python3 scripts/simulate_gl_sync.py 2>&1 | tee evidence/simulate-gl-sync.log
+	set -o pipefail; set -a; . ./.env; set +a; python3 scripts/simulate_gl_sync.py 2>&1 | tee evidence/simulate-gl-sync.log
 
 simulate-erp:
 	set -o pipefail; python3 scripts/simulate_erp.py 2>&1 | tee evidence/simulate-erp.log

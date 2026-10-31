@@ -29,6 +29,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from integration_auth import integration_headers
+
 ROOT = Path(__file__).resolve().parent.parent
 INTEGRATION_URL = os.environ.get("INTEGRATION_URL", "http://localhost:8000")
 ERP_URL = os.environ.get("ERP_URL", "http://localhost:8001")
@@ -54,6 +56,8 @@ def call(
 ) -> tuple[int, Any]:
     request = urllib.request.Request(url, method=method, data=json.dumps(body).encode() if body is not None else None)
     request.add_header("Content-Type", "application/json")
+    for name, value in integration_headers(url).items():
+        request.add_header(name, value)
     for name, value in (headers or {}).items():
         request.add_header(name, value)
     if fineract:

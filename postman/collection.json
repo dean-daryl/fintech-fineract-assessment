@@ -13,7 +13,9 @@
     { "key": "fineract_password", "value": "password" },
     { "key": "gl_reference", "value": "GL-1200" },
     { "key": "gl_sync_reference", "value": "POSTMAN-GL-SYNC-1" },
-    { "key": "journal_reference", "value": "POSTMAN-JE-1" }
+    { "key": "journal_reference", "value": "POSTMAN-JE-1" },
+    { "key": "partner_api_key", "value": "change-me-partner-key" },
+    { "key": "admin_api_key", "value": "change-me-admin-key" }
   ],
   "item": [
     {
@@ -95,6 +97,8 @@
     },
     {
       "name": "Integration Service",
+      "description": "Every route except /health needs X-API-Key: partner_api_key for /api, admin_api_key for /admin (PARTNER_API_KEY and ADMIN_API_KEY in .env).",
+      "auth": { "type": "apikey", "apikey": [{ "key": "key", "value": "X-API-Key" }, { "key": "value", "value": "{{partner_api_key}}" }, { "key": "in", "value": "header" }] },
       "item": [
         {
           "name": "Sync GL accounts",
@@ -115,12 +119,13 @@
           "request": {
             "method": "POST",
             "url": "{{integration_url}}/admin/recover",
+            "auth": { "type": "apikey", "apikey": [{ "key": "key", "value": "X-API-Key" }, { "key": "value", "value": "{{admin_api_key}}" }, { "key": "in", "value": "header" }] },
             "description": "Retries GL accounts left in SYNC_PENDING whose next attempt is due. Also runs on startup and every 30 seconds."
           }
         },
         {
           "name": "Health",
-          "request": { "method": "GET", "url": "{{integration_url}}/health" }
+          "request": { "method": "GET", "url": "{{integration_url}}/health", "auth": { "type": "noauth" } }
         }
       ]
     },

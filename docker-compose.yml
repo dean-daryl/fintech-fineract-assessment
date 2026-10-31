@@ -73,6 +73,9 @@ services:
       FINERACT_BASE_URL: https://fineract:8443/fineract-provider/api/v1
       FINERACT_USERNAME: ${FINERACT_API_USERNAME:-integration-api}
       FINERACT_PASSWORD: ${FINERACT_API_PASSWORD:?set in .env}
+      # X-API-Key for partner routes (/api) and for operator routes (/admin); see DECISIONS.md D-027
+      PARTNER_API_KEY: ${PARTNER_API_KEY:?set in .env}
+      ADMIN_API_KEY: ${ADMIN_API_KEY:?set in .env}
       # Fineract's image ships a self-signed certificate (see DECISIONS.md D-008)
       FINERACT_TLS_VERIFY: "false"
       ERP_BASE_URL: http://mock-erp:8000

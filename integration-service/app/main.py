@@ -4,17 +4,22 @@ import uuid
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager, suppress
 
-from fastapi import FastAPI, Request, Response
+from fastapi import Depends, FastAPI, Request, Response
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.admin import router as admin_router
 from app.api.clients import router as clients_router
 from app.api.gl_accounts import router as gl_accounts_router
 from app.api.loans import router as loans_router
 from app.api.reconciliation import router as reconciliation_router
+from app.auth import require_admin_key, require_partner_key
 from app.clients.erp import ErpClient
 from app.clients.fineract import FineractClient
 from app.config import get_settings
 from app.db import Base, SessionLocal, engine
+from app.errors import INVALID_REQUEST, error_body, validation_details
 from app.faults import FaultInjector
 from app.logs import configure_logging, correlation_id
 from app.services.clients import ClientCreation, ClientService
@@ -87,18 +92,34 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(title="Integration Service", lifespan=lifespan)
-app.include_router(gl_accounts_router, prefix=API_PREFIX)
-app.include_router(clients_router, prefix=API_PREFIX)
-app.include_router(loans_router, prefix=API_PREFIX)
-app.include_router(reconciliation_router, prefix=API_PREFIX)
-app.include_router(admin_router)
+partner = [Depends(require_partner_key)]
+app.include_router(gl_accounts_router, prefix=API_PREFIX, dependencies=partner)
+app.include_router(clients_router, prefix=API_PREFIX, dependencies=partner)
+app.include_router(loans_router, prefix=API_PREFIX, dependencies=partner)
+app.include_router(reconciliation_router, prefix=API_PREFIX, dependencies=partner)
+app.include_router(admin_router, dependencies=[Depends(require_admin_key)])
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_error(request: Request, exc: StarletteHTTPException) -> JSONResponse:
+    return JSONResponse(error_body(exc.status_code, str(exc.detail)), status_code=exc.status_code, headers=exc.headers)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error(request: Request, exc: RequestValidationError) -> JSONResponse:
+    body = error_body(422, "the request is not valid", code=INVALID_REQUEST, details=validation_details(exc.errors()))
+    return JSONResponse(body, status_code=422)
 
 
 @app.middleware("http")
 async def correlation_id_middleware(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
     token = correlation_id.set(request.headers.get("X-Correlation-ID") or str(uuid.uuid4()))
     try:
-        response = await call_next(request)
+        try:
+            response = await call_next(request)
+        except Exception:
+            log.exception("Unhandled error")
+            response = JSONResponse(error_body(500, "internal error"), status_code=500)
         response.headers["X-Correlation-ID"] = correlation_id.get() or ""
         return response
     finally:

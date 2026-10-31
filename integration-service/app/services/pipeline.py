@@ -11,6 +11,7 @@ from app.domain.accounting import AccountingMappingError, JournalEntry, to_erp_j
 from app.domain.idempotency import ReplayKind, payload_hash, replay_kind
 from app.domain.loans import FineractLoanTransaction
 from app.domain.states import OperationStatus, OperationType, has_erp_step
+from app.errors import error_body
 from app.faults import FaultInjector, FaultPoint
 from app.models import Operation
 from app.services.operations import OperationStore
@@ -94,10 +95,11 @@ class OperationPipeline:
         if kind is ReplayKind.PAYLOAD_CONFLICT:
             return OperationResult(
                 409,
-                {
-                    "external_reference": operation.external_reference,
-                    "error": "external_reference was already used with a different payload",
-                },
+                error_body(
+                    409,
+                    "external_reference was already used with a different payload",
+                    external_reference=operation.external_reference,
+                ),
             )
         if kind is ReplayKind.IN_PROGRESS:
             return OperationResult(202, self._body(handler, operation, OperationStatus(operation.status)))
@@ -298,7 +300,7 @@ class OperationPipeline:
         return OperationResult(202, body)
 
     def _fail(self, handler: OperationHandler, operation: Operation, status_code: int, error: str) -> OperationResult:
-        body = {**self._body(handler, operation, OperationStatus.FAILED), "error": error}
+        body = error_body(status_code, error, **self._body(handler, operation, OperationStatus.FAILED))
         self._store.transition(operation.id, OperationStatus.FAILED, last_error=error, response_code=status_code, response=body)
         return OperationResult(status_code, body)
 

@@ -17,6 +17,8 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
+from integration_auth import integration_headers
+
 ERP_URL = os.environ.get("ERP_URL", "http://localhost:8001")
 INTEGRATION_URL = os.environ.get("INTEGRATION_URL", "http://localhost:8000")
 FINERACT_URL = os.environ.get("FINERACT_URL", "https://localhost:8443/fineract-provider/api/v1")
@@ -33,6 +35,8 @@ SYNC_REFERENCE = f"SIM-GL-SYNC-{int(time.time()) % 1_000_000:06d}"
 def call(method: str, url: str, body: dict[str, Any] | None = None, fineract: bool = False) -> tuple[int, Any]:
     request = urllib.request.Request(url, method=method, data=json.dumps(body).encode() if body is not None else None)
     request.add_header("Content-Type", "application/json")
+    for name, value in integration_headers(url).items():
+        request.add_header(name, value)
     if fineract:
         request.add_header("Authorization", f"Basic {FINERACT_AUTH}")
         request.add_header("Fineract-Platform-TenantId", "default")

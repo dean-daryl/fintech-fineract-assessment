@@ -16,6 +16,8 @@ import urllib.error
 import urllib.request
 from typing import Any
 
+from integration_auth import integration_headers
+
 ERP_URL = os.environ.get("ERP_URL", "http://localhost:8001")
 INTEGRATION_URL = os.environ.get("INTEGRATION_URL", "http://localhost:8000")
 FINERACT_ROOT = os.environ.get("FINERACT_ROOT", "https://localhost:8443/fineract-provider")
@@ -105,6 +107,8 @@ def _auth(username: str, password: str) -> str:
 def call(method: str, url: str, body: dict[str, Any] | None = None, auth: str | None = None) -> tuple[int, Any]:
     request = urllib.request.Request(url, method=method, data=json.dumps(body).encode() if body is not None else None)
     request.add_header("Content-Type", "application/json")
+    for name, value in integration_headers(url).items():
+        request.add_header(name, value)
     is_fineract = url.startswith(FINERACT_ROOT)
     if is_fineract:
         request.add_header("Authorization", auth or _auth(ADMIN_USERNAME, ADMIN_PASSWORD))

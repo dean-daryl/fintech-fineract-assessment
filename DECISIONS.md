@@ -494,7 +494,7 @@ Partners identify clients and loans only by business ids. Fineract's numeric ids
 **Evidence.** `make simulate-failures` (S-J1 to S-J5) runs all five scenarios on one loan and prints, for each, our operation, Fineract's transactions with that `externalId`, and the ERP entry plus a row count from the ERP database, before, during and after recovery.
 
 **Known weaknesses.**
-- `/admin/*` has no authentication, and with fault injection on, anyone who reaches it can crash the service. Both are for this assessment's local stack only; a real deployment would protect admin routes and never enable faults.
+- With fault injection on, anyone holding the admin key can crash the service. `/admin/*` needs the admin key (D-027), and faults are for this assessment's local stack only; a real deployment would never enable them.
 - After a crash, the operation waits for its lease (60 s) before the sweep takes it. A shorter lease recovers faster but risks overlapping a slow request (D-014).
 - `NEEDS_RECONCILIATION` operations stay terminal; D-024 reports and repairs the ERP gap behind them.
 
@@ -621,3 +621,28 @@ If Fineract reprocesses later repayments after a reversal and changes their spli
 - Fineract can still return a concurrency 409 on every inline and deferred attempt under sustained contention on one loan. The operation then ends `FAILED` (Fineract never applied it) after `operation_max_attempts`, and the partner must resend.
 - The overpayment race in D-017 remains: concurrent repayments that each pass the live balance check can together exceed the balance. The simulation's repayments total 1,000,000 of 5,500,799 outstanding, so they don't exercise it.
 - Retried repayments are applied in whatever order Fineract books them, so the principal/interest split of each one depends on that order (S-I3). The totals are what Fineract's schedule says either way, and the ERP mirrors each transaction's own split.
+
+## D-027: API keys and one error format (Part E)
+
+**Authentication.** Every route under `/api` needs the header `X-API-Key` matching `PARTNER_API_KEY`. Every route under `/admin` needs `ADMIN_API_KEY`. `/health`, `/docs` and `/openapi.json` stay open. A missing or wrong key gets 401 with `WWW-Authenticate: X-API-Key`, before the request body is validated or any operation row is written.
+- **Why an API key, not OAuth2 or mTLS.** The partner is a single server-to-server caller, and the brief asks for authentication, not identity management. A static key carried over TLS is the usual contract for that. OAuth2 client credentials would add a token issuer to the stack for no extra correctness.
+- **Why two keys.** `/admin` can run the recovery sweep and, with fault injection on, crash the service (D-023). A partner key must not be able to do that.
+- **How it is checked.** `app/auth.py` compares with `hmac.compare_digest`, so timing doesn't leak how much of a key matched. FastAPI's `APIKeyHeader` scheme makes `/docs` show an "Authorize" button for each key. Both keys are required settings, so the service won't start without them. Compose reads them from `.env` (`:?set in .env`).
+- **Scripts and Postman.** `scripts/integration_auth.py` adds the right key by path, so every simulation and `bootstrap.py` authenticate. The Postman folder uses `{{partner_api_key}}`, and the recovery request uses `{{admin_api_key}}`.
+
+**Error format.** Every error response is one flat JSON object:
+
+```json
+{"error": "loan LN-2026-999999 not found", "code": "not_found"}
+```
+
+- `error` is the human message, and `code` is a stable machine code taken from the status (`app/errors.py`): `unauthorized`, `not_found`, `conflict`, `unprocessable`, `service_unavailable`, `upstream_error`, `internal_error`. Request validation uses `invalid_request` and adds `details`, a list of `{"in", "field", "message"}` naming the body, path or query field.
+- Operation failures keep their context next to `error` and `code`: `external_reference`, `loan_reference`, `operation_status`. One shape covers a live failure and the replay of a stored one.
+- **Why flat, not `{"error": {...}}`.** Operation results were already flat with an `error` string, and their replay bodies are stored in `operations.response`. Keeping them flat means a replay and a live error look the same.
+- **Where it's enforced.** Handlers for `HTTPException` and `RequestValidationError` cover every route, including 404 and 405 from routing. An unhandled exception is caught in the correlation-id middleware, logged with its stack trace, and answered as `500 internal_error`. Catching it there means even a 500 carries `X-Correlation-ID`.
+- **Tests.** `tests/test_errors.py` covers the pure functions. `tests/test_api_contract.py` drives the app over HTTP without its lifespan (no database or downstream calls): 401 for no key, a wrong key, or the other route group's key; open `/health` and `/openapi.json`; body and path validation; `HTTPException`; an unhandled error; and correlation ids.
+
+**Known weaknesses.**
+- One key per route group and no per-partner identity. A second partner would need its own key and an `operations` column recording which partner sent each request. Keys rotate only by restarting with new values.
+- The service itself serves plain HTTP on port 8000, so in a real deployment TLS would come from a reverse proxy in front of it.
+- Failed operations stored before this change replay their original body, which has no `code`.

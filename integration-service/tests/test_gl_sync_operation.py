@@ -1,6 +1,8 @@
 from datetime import UTC, datetime
 from typing import Any
 
+from pydantic import SecretStr
+
 from app.clients.erp import ErpUnavailableError
 from app.config import Settings
 from app.models import GLAccountSync, GLSyncStatus
@@ -37,7 +39,15 @@ class FakeGLSyncService:
 
 
 def _submit(service: FakeGLSyncService, store: FakeStore, reference: str) -> tuple[int, dict[str, Any]]:
-    settings = Settings(database_url="x", erp_base_url="x", fineract_base_url="x", fineract_username="x", fineract_password="x")
+    settings = Settings(
+        database_url="x",
+        erp_base_url="x",
+        fineract_base_url="x",
+        fineract_username="x",
+        fineract_password="x",
+        partner_api_key=SecretStr("x"),
+        admin_api_key=SecretStr("x"),
+    )
     pipeline = OperationPipeline(store, None, settings)  # type: ignore[arg-type]
     result = pipeline.submit(GLAccountsSync(service), reference, {})  # type: ignore[arg-type]
     return result.status_code, result.body

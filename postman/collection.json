@@ -12,7 +12,8 @@
     { "key": "fineract_username", "value": "mifos" },
     { "key": "fineract_password", "value": "password" },
     { "key": "gl_reference", "value": "GL-1200" },
-    { "key": "gl_sync_reference", "value": "POSTMAN-GL-SYNC-1" }
+    { "key": "gl_sync_reference", "value": "POSTMAN-GL-SYNC-1" },
+    { "key": "journal_reference", "value": "POSTMAN-JE-1" }
   ],
   "item": [
     {
@@ -28,7 +29,7 @@
               "mode": "raw",
               "raw": "{\n  \"code\": \"1200\",\n  \"name\": \"Loan Receivable\",\n  \"type\": \"ASSET\",\n  \"currency\": \"RWF\",\n  \"external_reference\": \"{{gl_reference}}\"\n}"
             },
-            "description": "201 when new, 200 with the existing account when sent again unchanged, 409 when the reference or code is reused with different details."
+            "description": "The ERP seeds GL-1200 at startup, so this returns 200 with the existing account. 201 for a new account, 409 when the reference or code is reused with different details."
           }
         },
         {
@@ -51,6 +52,40 @@
         {
           "name": "Get account",
           "request": { "method": "GET", "url": "{{erp_url}}/api/accounts/{{gl_reference}}" }
+        },
+        {
+          "name": "Account balance",
+          "request": { "method": "GET", "url": "{{erp_url}}/api/accounts/1200/balance" }
+        },
+        {
+          "name": "Post journal entry",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{erp_url}}/api/journal-entries",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"external_reference\": \"{{journal_reference}}\",\n  \"entry_date\": \"2026-10-30\",\n  \"description\": \"Example transfer\",\n  \"currency\": \"RWF\",\n  \"lines\": [\n    { \"account_code\": \"1300\", \"debit\": 250000 },\n    { \"account_code\": \"1100\", \"credit\": 250000 }\n  ]\n}"
+            },
+            "description": "201 when new, 200 with the stored entry when sent again unchanged, 409 when the reference is reused with different details. Posts to real accounts: use a scratch stack."
+          }
+        },
+        {
+          "name": "Post journal entry (unbalanced)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{erp_url}}/api/journal-entries",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"external_reference\": \"{{journal_reference}}-UNBALANCED\",\n  \"entry_date\": \"2026-10-30\",\n  \"description\": \"Example transfer\",\n  \"currency\": \"RWF\",\n  \"lines\": [\n    { \"account_code\": \"1300\", \"debit\": 250000 },\n    { \"account_code\": \"1100\", \"credit\": 249999 }\n  ]\n}"
+            },
+            "description": "Expected 422; nothing is stored."
+          }
+        },
+        {
+          "name": "Get journal entry",
+          "request": { "method": "GET", "url": "{{erp_url}}/api/journal-entries/{{journal_reference}}" }
         },
         {
           "name": "Health",

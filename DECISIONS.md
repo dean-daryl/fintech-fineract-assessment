@@ -99,9 +99,9 @@ Known weakness: one server is a shared failure point. Acceptable for an assessme
 
 ## D-009: Fineract setup is one bootstrap script
 
-`scripts/bootstrap.py` (`make bootstrap`) configures Fineract through the REST API only, in this order: wait for health, office, currency, API role and user, ERP chart of accounts and GL sync, loan product.
+`scripts/bootstrap.py` (`make bootstrap`) configures Fineract through the REST API only, in this order: wait for health, office, currency, API role and user, check the ERP's seeded chart of accounts (D-020) and GL sync, loan product.
 
-- Every step is get-or-create on a natural key: office name, currency code, role name, username, ERP `external_reference`, product `shortName`.
+- Every Fineract step is get-or-create on a natural key: office name, currency code, role name, username, product `shortName`.
 - If a resource exists with a different configuration, the script stops with a non-zero exit and lists the differences. It never updates anything, so a hand-made change is never silently overwritten.
 - It runs on the host with only the Python standard library, like the simulation scripts. Credentials come from `.env`.
 - Admin credentials (`FINERACT_ADMIN_*`) are used only here. The script refuses to run if the API user and the admin user are the same.
@@ -124,7 +124,7 @@ The loan product uses `accountingRule=2` (cash based).
 
 ## D-011: Chart of accounts and product GL mappings
 
-The chart of accounts belongs to the ERP. Bootstrap creates it in the ERP (`POST /api/accounts`, which returns 200 for an identical account), then calls `POST /api/gl-accounts/sync` on the integration service. Bootstrap stops if any account is not `SYNCED`. Fineract GL ids are looked up by external reference and used only inside bootstrap.
+The chart of accounts belongs to the ERP, which seeds it at startup (D-020). Bootstrap checks that every account the product maps is in the ERP, then calls `POST /api/gl-accounts/sync` on the integration service. Bootstrap stops if any account is not `SYNCED`. Fineract GL ids are looked up by external reference and used only inside bootstrap.
 
 All accounts are in RWF, with `external_reference = GL-<code>`:
 
@@ -335,3 +335,34 @@ Partners identify clients and loans only by business ids. Fineract's numeric ids
 - A code clash is only logged, not shown in the sync response.
 - `create_all` does not alter existing tables, so the new unique constraint needs a fresh database (`make reset`).
 - Bootstrap uses a new sync reference on every run (`BOOTSTRAP-GL-SYNC-<epoch seconds>`), so a run never replays an earlier failure. Each run adds one operation row; Fineract and the ERP are unchanged.
+
+## D-020: Mock ERP (Part G)
+
+**Endpoints.** `POST /api/accounts`, `GET /api/accounts`, `GET /api/accounts/{external_reference}`, `GET /api/accounts/{code}/balance`, `POST /api/journal-entries`, `GET /api/journal-entries/{external_reference}`.
+
+**The ERP seeds its own chart of accounts.** The 9 accounts of D-011 are inserted at startup with `ON CONFLICT DO NOTHING` (`app/seed.py`). An existing account with different details is logged and left unchanged. Bootstrap no longer defines the chart: it reads `GET /api/accounts` and stops if a mapped account is missing. One copy of the chart, owned by the system that owns it. The brief's examples (1100 Bank, 1200 Loan Receivable, 4000 Interest Income) start with "e.g."; 1100, 1200 and 4100 cover them.
+
+**Journal entries.** `journal_entries` (one row per entry, `external_reference` UNIQUE, the request's SHA-256 hash) and `journal_lines` (account, debit, credit). Amounts are whole RWF in `BIGINT` (D-009). Lines name accounts by `code`, like the balance route. Entries are immutable: no update or delete.
+
+| Request | Result |
+|---|---|
+| New reference, valid | 201 |
+| Same reference, same details | 200 with the stored entry |
+| Same reference, different details | 409 |
+| Fewer than 2 lines, a line with both or neither side, unknown account, account in another currency, debits ≠ credits | 422; nothing stored |
+
+**What the ERP enforces itself, without trusting the caller.**
+- Reference uniqueness is the database's `UNIQUE` constraint. Concurrent posts all try to insert; the one that loses gets the unique violation, rolls back, reads the winner and compares hashes. Same pattern as accounts.
+- `CHECK (debit >= 0 AND credit >= 0 AND (debit = 0) <> (credit = 0))` on every line, and `UNIQUE (entry_id, line_number)`.
+- Balance (debits = credits) is checked by `app/journal.py` before the insert, and the entry and its lines are written in one transaction. A balance rule in the database would need a deferred constraint trigger across rows; with immutable entries and a single write path, the check in the transaction is enough for a mock.
+
+**Balance** is debits minus credits for ASSET and EXPENSE, credits minus debits for the others, so a normal balance is positive. The response also gives both totals.
+
+**Identifiers.** Accounts are read by `external_reference` (`GET /api/accounts/{external_reference}`, used by GL sync) and by `code` for balances, as in the brief. The two routes have a different number of path segments, so they never clash.
+
+**Evidence script.** `scripts/simulate_erp.py` posts two entries that offset each other (1100 → 1300, then back), so balances end where they started and a re-run does not distort later accounting. Its references start with `SIM-ERP-`.
+
+**Known weaknesses.**
+- No reversal endpoint and no period close. A wrong entry can only be corrected by a new, offsetting entry, which is also how a real ledger works.
+- The line order is part of the hash: the same lines in another order are a different payload (409).
+- `create_all` creates the new tables on an existing database, but the chart only exists after the ERP restarts with the seed.

@@ -1,6 +1,6 @@
 """Configures Fineract for the assessment through its REST API, as get-or-create steps.
 
-Order: wait for health, office, currency, API role and user, ERP chart of accounts and GL sync, loan product.
+Order: wait for health, office, currency, API role and user, check the ERP's seeded chart of accounts, GL sync, loan product.
 Each step prints "created" or "exists, unchanged". A resource that exists with a different configuration
 stops the script with a non-zero exit; nothing is ever updated silently. Running it twice changes nothing.
 Uses only the standard library so it runs on the host without a virtualenv.
@@ -51,18 +51,6 @@ ROLE_PERMISSIONS = frozenset(
         "READ_JOURNALENTRY",
     }
 )
-
-CHART_OF_ACCOUNTS: list[dict[str, str]] = [
-    {"code": "1100", "name": "Cash at Bank", "type": "ASSET"},
-    {"code": "1200", "name": "Loan Receivable", "type": "ASSET"},
-    {"code": "1300", "name": "Transfers in Suspense", "type": "ASSET"},
-    {"code": "2100", "name": "Loan Overpayments", "type": "LIABILITY"},
-    {"code": "4100", "name": "Interest Income on Loans", "type": "INCOME"},
-    {"code": "4200", "name": "Fee Income", "type": "INCOME"},
-    {"code": "4300", "name": "Penalty Income", "type": "INCOME"},
-    {"code": "4400", "name": "Recoveries Income", "type": "INCOME"},
-    {"code": "5100", "name": "Loan Losses Written Off", "type": "EXPENSE"},
-]
 
 PRODUCT_GL_MAPPINGS: dict[str, str] = {
     "fundSourceAccountId": "GL-1100",
@@ -270,12 +258,14 @@ def ensure_api_user(office_id: int, role_id: int) -> None:
 
 
 def ensure_gl_accounts() -> dict[str, int]:
-    for account in CHART_OF_ACCOUNTS:
-        reference = f"GL-{account['code']}"
-        status, payload = call("POST", f"{ERP_URL}/api/accounts", {**account, "currency": CURRENCY, "external_reference": reference})
-        if status not in (200, 201):
-            raise BootstrapError(f"ERP account {reference} -> {status}: {json.dumps(payload)}")
-        report(f"ERP account {reference} {account['name']!r}", "created" if status == 201 else "exists, unchanged")
+    status, accounts = call("GET", f"{ERP_URL}/api/accounts")
+    if status != 200:
+        raise BootstrapError(f"ERP account list -> {status}: {json.dumps(accounts)}")
+    erp_references = {account["external_reference"] for account in accounts}
+    missing = sorted(set(PRODUCT_GL_MAPPINGS.values()) - erp_references)
+    if missing:
+        raise BootstrapError(f"ERP chart of accounts lacks {', '.join(missing)}; the ERP seeds it at startup")
+    report(f"ERP chart of accounts ({len(accounts)} accounts)", "seeded by the ERP")
 
     sync_reference = f"BOOTSTRAP-GL-SYNC-{int(time.time())}"
     status, payload = call("POST", f"{INTEGRATION_URL}/api/gl-accounts/sync", {"external_reference": sync_reference})

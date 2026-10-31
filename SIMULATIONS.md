@@ -32,10 +32,11 @@ Every scenario is re-runnable against a running stack (`make up`). Logs are in `
 - **ERP state:** 1 account. **Fineract state:** 1 GL account with `externalReference=GL-1200`. **Integration state:** 1 `gl_account_sync` row, `SYNCED`.
 - **Expected:** 1 / 1 / 1, `SYNCED`. **Actual:** PASS (`evidence/simulate-gl-sync.log`). Re-running changes nothing.
 - **Explanation:** ERP unique constraints, then the sync table's primary key plus `SKIP LOCKED`, then Fineract's reference check.
+- **Note:** since D-020 the ERP seeds `GL-1200` at startup, so on a fresh stack all four ERP calls return 200.
 
 ## S-A3: Fineract down during sync
 
-- **Initial state:** `GL-1200` synced. A new ERP account `GL-4100` (INCOME).
+- **Initial state:** `GL-1200` synced. A new ERP account `GL-4100` (INCOME). Since D-020 the ERP seeds `GL-4100` at startup, so a rerun needs another new account.
 - **Request:** `docker compose stop fineract`, then `POST /api/gl-accounts/sync`. Then `docker compose start fineract`, wait until healthy, `POST /admin/recover`.
 - **Response:** while Fineract is down, `GL-4100` is `SYNC_PENDING` with the connection error recorded. After recovery: `{"gl_accounts_processed": 1}`.
 - **Fineract state:** `GL-4100` exists with type INCOME. **Integration state:** `GL-4100` is `SYNCED`.
@@ -66,3 +67,19 @@ Every scenario is re-runnable against a running stack (`make up`). Logs are in `
 - **Expected:** reads Kigali Main Office and the SAF product (RWF, 18% per year, 12 monthly, single disbursement, cash), and each of the 9 mappings points at the GL account with the expected ERP reference. Gets 403 on 6 admin endpoints.
 - **Actual:** 18/18 PASS on the development stack. To be captured in `evidence/verify-fineract-setup.log` on a fresh stack.
 - **Known gap (reported, not counted):** `PUT /currencies` is not authorized by Fineract 1.16.1, so the probe gets past security (404 for an unknown code). See DECISIONS.md D-013.
+
+## Part G evidence at a glance
+
+| What the brief asks | Command | Evidence |
+|---|---|---|
+| Seeded chart, idempotent journal entries, unbalanced entries rejected, balances | `make simulate-erp` | `evidence/simulate-erp.log` (not yet captured) |
+| Journal rules (balance, line shape, currency, balance sign) | `make test-python` | 16 mock-erp unit tests |
+
+## S-G1: Mock ERP journal entries
+
+- **Initial state:** stack up; the ERP has seeded its 9 accounts.
+- **Request:** the same balanced entry (Dr 1300 / Cr 1100, 250,000 RWF) 10 times in parallel; read it back; same reference with a different amount; four invalid entries (unbalanced, unknown account, one line, debit and credit on one line); an offsetting entry; the balance of an unknown account.
+- **Expected:** one 201 and nine 200s with the same body; 1300 up and 1100 down by 250,000 exactly once; 409; each invalid entry 422 and a GET for it 404; balances back to their starting values; 404.
+- **Actual:** not yet captured on the compose stack. To be recorded in `evidence/simulate-erp.log`.
+- **ERP state:** two `SIM-ERP-` entries per run; balances unchanged overall. **Fineract / integration state:** not involved.
+- **Explanation:** the unique constraint on `journal_entries.external_reference` decides which concurrent request inserts; the others read the stored entry and compare the request hash. Invalid entries fail validation before anything is written.

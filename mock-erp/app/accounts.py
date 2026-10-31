@@ -4,12 +4,13 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db import get_session
-from app.models import Account
+from app.journal import balance
+from app.models import Account, JournalLine
 
 router = APIRouter(prefix="/api/accounts", tags=["accounts"])
 
@@ -36,6 +37,16 @@ class AccountOut(AccountIn):
     model_config = ConfigDict(from_attributes=True)
 
     created_at: datetime
+
+
+class AccountBalanceOut(BaseModel):
+    code: str
+    name: str
+    type: AccountType
+    currency: str
+    debit_total: int
+    credit_total: int
+    balance: int
 
 
 def _same_payload(account: Account, payload: AccountIn) -> bool:
@@ -80,3 +91,24 @@ def get_account(external_reference: str, session: SessionDep) -> Account:
     if account is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"account {external_reference} not found")
     return account
+
+
+@router.get("/{code}/balance", response_model=AccountBalanceOut)
+def get_account_balance(code: str, session: SessionDep) -> AccountBalanceOut:
+    account = session.scalar(select(Account).where(Account.code == code))
+    if account is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"account {code} not found")
+    debit_total, credit_total = session.execute(
+        select(func.coalesce(func.sum(JournalLine.debit), 0), func.coalesce(func.sum(JournalLine.credit), 0)).where(
+            JournalLine.account_id == account.id
+        )
+    ).one()
+    return AccountBalanceOut(
+        code=account.code,
+        name=account.name,
+        type=AccountType(account.type),
+        currency=account.currency,
+        debit_total=debit_total,
+        credit_total=credit_total,
+        balance=balance(account.type, debit_total, credit_total),
+    )

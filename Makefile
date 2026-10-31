@@ -9,7 +9,7 @@ FINERACT_TAG := $(shell sed -n 's/^ARG FINERACT_TAG=//p' fineract-customization/
 PATCH_DIR := $(CURDIR)/fineract-customization/patch
 JAVA_HOME_25 ?= $(shell /usr/libexec/java_home -v 25 2>/dev/null)
 
-.PHONY: build-fineract patches up down reset logs ps bootstrap verify-fineract-setup evidence-bootstrap simulate-gl-sync simulate-loan-lifecycle demo-fineract-gl evidence-compose-up test-java test-python lint
+.PHONY: build-fineract patches up down reset logs ps bootstrap verify-fineract-setup evidence-bootstrap simulate-gl-sync simulate-erp simulate-loan-lifecycle demo-fineract-gl evidence-compose-up test-java test-python lint
 
 # Builds what changed and waits until every service reports healthy.
 # Fineract is built through build-fineract (same builder and cache as before), not
@@ -73,6 +73,9 @@ evidence-bootstrap:
 simulate-gl-sync:
 	set -o pipefail; python3 scripts/simulate_gl_sync.py 2>&1 | tee evidence/simulate-gl-sync.log
 
+simulate-erp:
+	set -o pipefail; python3 scripts/simulate_erp.py 2>&1 | tee evidence/simulate-erp.log
+
 # Needs FINERACT_API_* from .env: Fineract's state after each stage is read directly from Fineract.
 simulate-loan-lifecycle:
 	set -o pipefail; set -a; . ./.env; set +a; python3 scripts/simulate_loan_lifecycle.py 2>&1 | tee evidence/simulate-loan-lifecycle.log
@@ -92,7 +95,9 @@ test-java:
 		:integration-tests:test --tests '*GLAccountExternalReferenceIntegrationTest' 2>&1 | tee $(CURDIR)/evidence/test-java.log
 
 test-python:
+	cd mock-erp && uv run pytest -q
 	cd integration-service && uv run pytest -q
 
 lint:
+	cd mock-erp && uv run ruff check && uv run ruff format --check && uv run mypy
 	cd integration-service && uv run ruff check && uv run ruff format --check && uv run mypy

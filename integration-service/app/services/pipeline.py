@@ -57,6 +57,15 @@ class OperationHandler(Protocol):
     def describe(self, operation: Operation) -> dict[str, Any]: ...
 
 
+FINERACT_UNAVAILABLE = "Fineract was unavailable on every attempt"
+FINERACT_NOT_ACCEPTED = "Fineract did not accept the request after every attempt"
+
+
+def fineract_rejection(error: FineractRejectedError) -> str:
+    """Partner-facing text: Fineract's error code only. Its message and our request path can carry Fineract ids."""
+    return f"Fineract rejected the request: {error.code}" if error.code else "Fineract rejected the request"
+
+
 def rejection_status_code(status_code: int, code: str | None) -> int:
     if code == FINERACT_NOT_AUTHORIZED:
         return 502
@@ -119,7 +128,9 @@ class OperationPipeline:
             except (FineractUnavailableError, FineractTimeoutError) as exc:
                 return self._retry_later(handler, operation, exc)
             except FineractRejectedError as exc:
-                return self._fail(handler, operation, rejection_status_code(exc.status_code, exc.code), exc.message)
+                return self._fail(
+                    handler, operation, rejection_status_code(exc.status_code, exc.code), fineract_rejection(exc), detail=exc.message
+                )
             operation = self._store.transition(operation.id, OperationStatus.FINERACT_PENDING)
             status = OperationStatus.FINERACT_PENDING
 
@@ -170,7 +181,11 @@ class OperationPipeline:
         if existing is not None:
             return self._complete(handler, operation, existing)
         return self._fail(
-            handler, operation, rejection_status_code(error.status_code, error.code), f"Fineract rejected the request: {error.message}"
+            handler,
+            operation,
+            rejection_status_code(error.status_code, error.code),
+            fineract_rejection(error),
+            detail=f"Fineract rejected the request: {error.message}",
         )
 
     def _retry_later(self, handler: OperationHandler, operation: Operation, error: FineractError) -> OperationResult:
@@ -178,7 +193,7 @@ class OperationPipeline:
             operation = self._store.defer(operation.id, str(error))
             return OperationResult(202, self._body(handler, operation, OperationStatus(operation.status)))
         if OperationStatus(operation.status) is OperationStatus.RECEIVED:
-            return self._fail(handler, operation, 503, f"Fineract was unavailable on every attempt: {error}")
+            return self._fail(handler, operation, 503, FINERACT_UNAVAILABLE, detail=f"{FINERACT_UNAVAILABLE}: {error}")
         try:
             existing = handler.look_up(operation)
         except OperationRejected as exc:
@@ -194,7 +209,7 @@ class OperationPipeline:
             )
             return OperationResult(202, body)
         if existing is None:
-            return self._fail(handler, operation, 503, f"Fineract did not accept the request after every attempt: {error}")
+            return self._fail(handler, operation, 503, FINERACT_NOT_ACCEPTED, detail=f"{FINERACT_NOT_ACCEPTED}: {error}")
         return self._complete(handler, operation, existing)
 
     def _complete(self, handler: OperationHandler, operation: Operation, outcome: FineractOutcome) -> OperationResult:
@@ -299,9 +314,11 @@ class OperationPipeline:
         )
         return OperationResult(202, body)
 
-    def _fail(self, handler: OperationHandler, operation: Operation, status_code: int, error: str) -> OperationResult:
+    def _fail(
+        self, handler: OperationHandler, operation: Operation, status_code: int, error: str, detail: str | None = None
+    ) -> OperationResult:
         body = error_body(status_code, error, **self._body(handler, operation, OperationStatus.FAILED))
-        self._store.transition(operation.id, OperationStatus.FAILED, last_error=error, response_code=status_code, response=body)
+        self._store.transition(operation.id, OperationStatus.FAILED, last_error=detail or error, response_code=status_code, response=body)
         return OperationResult(status_code, body)
 
     @staticmethod

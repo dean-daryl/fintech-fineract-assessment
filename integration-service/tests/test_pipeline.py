@@ -1,3 +1,4 @@
+import json
 from collections.abc import Collection
 from datetime import UTC, date, datetime
 from typing import Any
@@ -13,7 +14,15 @@ from app.domain.states import OperationStatus, OperationType, check_transition, 
 from app.faults import FaultInjector, FaultPoint
 from app.models import Operation
 from app.services.operations import Claim
-from app.services.pipeline import FineractOutcome, OperationPipeline, OperationRejected, rejection_status_code
+from app.services.pipeline import (
+    FINERACT_NOT_ACCEPTED,
+    FINERACT_UNAVAILABLE,
+    FineractOutcome,
+    OperationPipeline,
+    OperationRejected,
+    fineract_rejection,
+    rejection_status_code,
+)
 
 
 class FakeStore:
@@ -469,3 +478,60 @@ def test_fineract_down_on_every_attempt_fails_with_503_and_nothing_sent() -> Non
     pipeline.recover([handler])
     assert (_row(store).status, _row(store).response_code) == ("FAILED", 503)
     assert (handler.executed, handler.looked_up) == (0, 0)
+
+
+FINERACT_PATH_ERROR = "POST /loans/7/transactions?command=repayment: ConnectError('connection refused')"
+CHARGED_OFF = FineractRejectedError(
+    403,
+    {
+        "userMessageGlobalisationCode": "error.msg.loan.charged.off",
+        "defaultUserMessage": "Loan: 7 disbursement is not allowed on charged-off loan.",
+    },
+)
+
+
+def _partner_text(body: dict[str, Any]) -> str:
+    return json.dumps(body)
+
+
+def test_fineract_down_at_prepare_on_every_attempt_hides_the_fineract_path() -> None:
+    pipeline, store = _pipeline(operation_inline_attempts=1, operation_max_attempts=1)
+    handler = FakeHandler(execute=[DONE], look_up=[])
+    handler.prepare = lambda operation: (_ for _ in ()).throw(FineractUnavailableError(FINERACT_PATH_ERROR))  # type: ignore[method-assign]
+    result = pipeline.submit(handler, "REPAY-1", PAYLOAD)
+    assert (result.status_code, result.body["error"], result.body["code"]) == (503, FINERACT_UNAVAILABLE, "service_unavailable")
+    assert "/loans/7" not in _partner_text(result.body)
+    assert _row(store).last_error == f"{FINERACT_UNAVAILABLE}: {FINERACT_PATH_ERROR}"
+    assert pipeline.submit(handler, "REPAY-1", PAYLOAD).body == result.body
+
+
+def test_fineract_down_after_prepare_on_every_attempt_hides_the_fineract_path() -> None:
+    pipeline, store = _pipeline(operation_inline_attempts=1, operation_max_attempts=1)
+    handler = FakeHandler(execute=[FineractUnavailableError(FINERACT_PATH_ERROR)], look_up=[None])
+    result = pipeline.submit(handler, "REPAY-1", PAYLOAD)
+    assert (result.status_code, result.body["error"]) == (503, FINERACT_NOT_ACCEPTED)
+    assert "/loans/7" not in _partner_text(result.body)
+    assert FINERACT_PATH_ERROR in (_row(store).last_error or "")
+
+
+def test_fineract_rejection_shows_the_code_not_the_message() -> None:
+    pipeline, store = _pipeline()
+    result = pipeline.submit(FakeHandler(execute=[CHARGED_OFF], look_up=[None]), "REPAY-1", PAYLOAD)
+    assert (result.status_code, result.body["error"]) == (409, "Fineract rejected the request: error.msg.loan.charged.off")
+    assert "Loan: 7" not in _partner_text(result.body)
+    assert _row(store).last_error == "Fineract rejected the request: Loan: 7 disbursement is not allowed on charged-off loan."
+
+
+def test_fineract_rejection_at_prepare_shows_the_code_not_the_message() -> None:
+    pipeline, store = _pipeline()
+    handler = FakeHandler(execute=[DONE], look_up=[])
+    handler.prepare = lambda operation: (_ for _ in ()).throw(CHARGED_OFF)  # type: ignore[method-assign]
+    result = pipeline.submit(handler, "REPAY-1", PAYLOAD)
+    assert (result.status_code, result.body["error"]) == (409, "Fineract rejected the request: error.msg.loan.charged.off")
+    assert "Loan: 7" not in _partner_text(result.body)
+    assert _row(store).last_error == "Loan: 7 disbursement is not allowed on charged-off loan."
+    assert handler.executed == 0
+
+
+def test_fineract_rejection_without_a_code_says_only_that_it_was_rejected() -> None:
+    assert fineract_rejection(FineractRejectedError(400, "Loan 7 is broken")) == "Fineract rejected the request"

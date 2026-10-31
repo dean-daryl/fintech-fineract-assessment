@@ -1,0 +1,65 @@
+== S-L1: seed the GL outcomes (run 441295) ==
+  ERP POST /api/accounts SIML-441295-MATCHED code 94412950 -> 201 {"code": "94412950", "name": "Sim Matched 441295", "type": "ASSET", "currency": "RWF", "external_reference": "SIML-441295-MATCHED", "created_at": "2026-10-31T10:08:15.874660Z"}
+  ERP POST /api/accounts SIML-441295-RENAMED code 94412951 -> 201 {"code": "94412951", "name": "Sim Renamed 441295", "type": "ASSET", "currency": "RWF", "external_reference": "SIML-441295-RENAMED", "created_at": "2026-10-31T10:08:15.899383Z"}
+  POST /api/gl-accounts/sync SIML-441295-SYNC-1 -> 201 {"operation_status": "COMPLETED", "this_run": [{"external_reference": "SIML-441295-MATCHED", "erp_code": "94412950", "status": "SYNCED", "attempts": 1, "last_error": null, "updated_at": "2026-10-31T10:08:17.253892+00:00"}, {"external_reference": "SIML-441295-RENAMED", "erp_code": "94412951", "status": "SYNCED", "attempts": 1, "last_error": null, "updated_at": "2026-10-31T10:08:17.394386+00:00"}]}
+  Fineract PUT /glaccounts/{id} for SIML-441295-RENAMED name -> 'Sim Renamed 441295 (edited)' -> 200 {"changes": {"name": "Sim Renamed 441295 (edited)"}}
+  ERP POST /api/accounts SIML-441295-NOT-SYNCED code 94412952 -> 201 {"code": "94412952", "name": "Sim Not-Synced 441295", "type": "ASSET", "currency": "RWF", "external_reference": "SIML-441295-NOT-SYNCED", "created_at": "2026-10-31T10:08:17.560817Z"}
+  Fineract POST /glaccounts code 94412953 (no external reference) -> 200 {"status": "created"}
+  Fineract POST /glaccounts/sync SIML-441295-ORPHAN (no ERP account) -> 200 {"status": "created"}
+  Fineract POST /glaccounts code 94412955 (no external reference) -> 200 {"status": "created"}
+  ERP POST /api/accounts SIML-441295-CLASH code 94412955 -> 201 {"code": "94412955", "name": "Sim Clash 441295", "type": "ASSET", "currency": "RWF", "external_reference": "SIML-441295-CLASH", "created_at": "2026-10-31T10:08:17.740742Z"}
+
+== S-L2: the report, read-only ==
+  GET /api/reconciliation/gl-accounts (before sync) -> 200
+  summary (whole chart, earlier runs included): {"MATCHED": 10, "MISSING_IN_FINERACT": 1, "MISSING_IN_ERP": 2, "CODE_CONFLICT": 1, "DETAILS_MISMATCH": 1}
+    MATCHED     {"external_reference": "SIML-441295-MATCHED", "gl_code": "94412950", "status": "MATCHED", "sync_status": "SYNCED", "erp": {"code": "94412950", "name": "Sim Matched 441295", "type": "ASSET", "currency": "RWF"}, "fineract": {"gl_code": "94412950", "name": "Sim Matched 441295", "type": "ASSET", "external_reference": "SIML-441295-MATCHED"}, "differences": [], "note": null}
+    RENAMED     {"external_reference": "SIML-441295-RENAMED", "gl_code": "94412951", "status": "DETAILS_MISMATCH", "sync_status": "SYNCED", "erp": {"code": "94412951", "name": "Sim Renamed 441295", "type": "ASSET", "currency": "RWF"}, "fineract": {"gl_code": "94412951", "name": "Sim Renamed 441295 (edited)", "type": "ASSET", "external_reference": "SIML-441295-RENAMED"}, "differences": ["name: ERP 'Sim Renamed 441295', Fineract 'Sim Renamed 441295 (edited)'"], "note": null}
+    NOT-SYNCED  {"external_reference": "SIML-441295-NOT-SYNCED", "gl_code": "94412952", "status": "MISSING_IN_FINERACT", "sync_status": null, "erp": {"code": "94412952", "name": "Sim Not-Synced 441295", "type": "ASSET", "currency": "RWF"}, "fineract": null, "differences": [], "note": null}
+    BRANCH      {"external_reference": null, "gl_code": "94412953", "status": "MISSING_IN_ERP", "sync_status": null, "erp": null, "fineract": {"gl_code": "94412953", "name": "Sim Branch 441295", "type": "ASSET", "external_reference": null}, "differences": [], "note": "no external reference: created in Fineract outside the GL sync"}
+    ORPHAN      {"external_reference": "SIML-441295-ORPHAN", "gl_code": "94412954", "status": "MISSING_IN_ERP", "sync_status": null, "erp": null, "fineract": {"gl_code": "94412954", "name": "Sim Orphan 441295", "type": "ASSET", "external_reference": "SIML-441295-ORPHAN"}, "differences": [], "note": "linked to SIML-441295-ORPHAN, which the ERP does not hold"}
+    CLASH       {"external_reference": "SIML-441295-CLASH", "gl_code": "94412955", "status": "CODE_CONFLICT", "sync_status": null, "erp": {"code": "94412955", "name": "Sim Clash 441295", "type": "ASSET", "currency": "RWF"}, "fineract": {"gl_code": "94412955", "name": "Sim Clash 441295", "type": "ASSET", "external_reference": null}, "differences": [], "note": "Fineract GL account 94412955 already exists with no external reference; sync never adopts an existing account"}
+  [PASS] before sync: report answers 200
+  [PASS] before sync: MATCHED is MATCHED
+  [PASS] before sync: RENAMED is DETAILS_MISMATCH
+  [PASS] before sync: NOT-SYNCED is MISSING_IN_FINERACT
+  [PASS] before sync: BRANCH is MISSING_IN_ERP
+  [PASS] before sync: ORPHAN is MISSING_IN_ERP
+  [PASS] before sync: CLASH is CODE_CONFLICT
+  [PASS] RENAMED lists the name difference
+  [PASS] CLASH has one row, carrying both sides
+  [PASS] NOT-SYNCED has no sync status yet
+  GET /api/reconciliation/gl-accounts (again) -> 200
+  summary (whole chart, earlier runs included): {"MATCHED": 10, "MISSING_IN_FINERACT": 1, "MISSING_IN_ERP": 2, "CODE_CONFLICT": 1, "DETAILS_MISMATCH": 1}
+    MATCHED     {"external_reference": "SIML-441295-MATCHED", "gl_code": "94412950", "status": "MATCHED", "sync_status": "SYNCED", "erp": {"code": "94412950", "name": "Sim Matched 441295", "type": "ASSET", "currency": "RWF"}, "fineract": {"gl_code": "94412950", "name": "Sim Matched 441295", "type": "ASSET", "external_reference": "SIML-441295-MATCHED"}, "differences": [], "note": null}
+    RENAMED     {"external_reference": "SIML-441295-RENAMED", "gl_code": "94412951", "status": "DETAILS_MISMATCH", "sync_status": "SYNCED", "erp": {"code": "94412951", "name": "Sim Renamed 441295", "type": "ASSET", "currency": "RWF"}, "fineract": {"gl_code": "94412951", "name": "Sim Renamed 441295 (edited)", "type": "ASSET", "external_reference": "SIML-441295-RENAMED"}, "differences": ["name: ERP 'Sim Renamed 441295', Fineract 'Sim Renamed 441295 (edited)'"], "note": null}
+    NOT-SYNCED  {"external_reference": "SIML-441295-NOT-SYNCED", "gl_code": "94412952", "status": "MISSING_IN_FINERACT", "sync_status": null, "erp": {"code": "94412952", "name": "Sim Not-Synced 441295", "type": "ASSET", "currency": "RWF"}, "fineract": null, "differences": [], "note": null}
+    BRANCH      {"external_reference": null, "gl_code": "94412953", "status": "MISSING_IN_ERP", "sync_status": null, "erp": null, "fineract": {"gl_code": "94412953", "name": "Sim Branch 441295", "type": "ASSET", "external_reference": null}, "differences": [], "note": "no external reference: created in Fineract outside the GL sync"}
+    ORPHAN      {"external_reference": "SIML-441295-ORPHAN", "gl_code": "94412954", "status": "MISSING_IN_ERP", "sync_status": null, "erp": null, "fineract": {"gl_code": "94412954", "name": "Sim Orphan 441295", "type": "ASSET", "external_reference": "SIML-441295-ORPHAN"}, "differences": [], "note": "linked to SIML-441295-ORPHAN, which the ERP does not hold"}
+    CLASH       {"external_reference": "SIML-441295-CLASH", "gl_code": "94412955", "status": "CODE_CONFLICT", "sync_status": null, "erp": {"code": "94412955", "name": "Sim Clash 441295", "type": "ASSET", "currency": "RWF"}, "fineract": {"gl_code": "94412955", "name": "Sim Clash 441295", "type": "ASSET", "external_reference": null}, "differences": [], "note": "Fineract GL account 94412955 already exists with no external reference; sync never adopts an existing account"}
+  [PASS] again: report answers 200
+  [PASS] a second report gives the same rows
+  Fineract GL accounts / ERP accounts before: (14, 13), after: (14, 13)
+  [PASS] the report wrote nothing to Fineract or the ERP
+  [PASS] no Fineract numeric id in the rows
+
+== S-L3: run the GL sync, then report again ==
+  POST /api/gl-accounts/sync SIML-441295-SYNC-2 -> 201 {"operation_status": "COMPLETED", "this_run": [{"external_reference": "SIML-441295-MATCHED", "erp_code": "94412950", "status": "SYNCED", "attempts": 1, "last_error": null, "updated_at": "2026-10-31T10:08:17.253892+00:00"}, {"external_reference": "SIML-441295-RENAMED", "erp_code": "94412951", "status": "SYNCED", "attempts": 1, "last_error": null, "updated_at": "2026-10-31T10:08:17.394386+00:00"}, {"external_reference": "SIML-441295-NOT-SYNCED", "erp_code": "94412952", "status": "SYNCED", "attempts": 1, "last_error": null, "updated_at": "2026-10-31T10:08:18.262151+00:00"}, {"external_reference": "SIML-441295-CLASH", "erp_code": "94412955", "status": "FAILED", "attempts": 1, "last_error": "Fineract returned 409: error.msg.glaccount.glcode.conflict", "updated_at": "2026-10-31T10:08:18.669103+00:00"}]}
+  GET /api/reconciliation/gl-accounts (after sync) -> 200
+  summary (whole chart, earlier runs included): {"MATCHED": 11, "MISSING_IN_FINERACT": 0, "MISSING_IN_ERP": 2, "CODE_CONFLICT": 1, "DETAILS_MISMATCH": 1}
+    MATCHED     {"external_reference": "SIML-441295-MATCHED", "gl_code": "94412950", "status": "MATCHED", "sync_status": "SYNCED", "erp": {"code": "94412950", "name": "Sim Matched 441295", "type": "ASSET", "currency": "RWF"}, "fineract": {"gl_code": "94412950", "name": "Sim Matched 441295", "type": "ASSET", "external_reference": "SIML-441295-MATCHED"}, "differences": [], "note": null}
+    RENAMED     {"external_reference": "SIML-441295-RENAMED", "gl_code": "94412951", "status": "DETAILS_MISMATCH", "sync_status": "SYNCED", "erp": {"code": "94412951", "name": "Sim Renamed 441295", "type": "ASSET", "currency": "RWF"}, "fineract": {"gl_code": "94412951", "name": "Sim Renamed 441295 (edited)", "type": "ASSET", "external_reference": "SIML-441295-RENAMED"}, "differences": ["name: ERP 'Sim Renamed 441295', Fineract 'Sim Renamed 441295 (edited)'"], "note": null}
+    NOT-SYNCED  {"external_reference": "SIML-441295-NOT-SYNCED", "gl_code": "94412952", "status": "MATCHED", "sync_status": "SYNCED", "erp": {"code": "94412952", "name": "Sim Not-Synced 441295", "type": "ASSET", "currency": "RWF"}, "fineract": {"gl_code": "94412952", "name": "Sim Not-Synced 441295", "type": "ASSET", "external_reference": "SIML-441295-NOT-SYNCED"}, "differences": [], "note": null}
+    BRANCH      {"external_reference": null, "gl_code": "94412953", "status": "MISSING_IN_ERP", "sync_status": null, "erp": null, "fineract": {"gl_code": "94412953", "name": "Sim Branch 441295", "type": "ASSET", "external_reference": null}, "differences": [], "note": "no external reference: created in Fineract outside the GL sync"}
+    ORPHAN      {"external_reference": "SIML-441295-ORPHAN", "gl_code": "94412954", "status": "MISSING_IN_ERP", "sync_status": null, "erp": null, "fineract": {"gl_code": "94412954", "name": "Sim Orphan 441295", "type": "ASSET", "external_reference": "SIML-441295-ORPHAN"}, "differences": [], "note": "linked to SIML-441295-ORPHAN, which the ERP does not hold"}
+    CLASH       {"external_reference": "SIML-441295-CLASH", "gl_code": "94412955", "status": "CODE_CONFLICT", "sync_status": "FAILED", "erp": {"code": "94412955", "name": "Sim Clash 441295", "type": "ASSET", "currency": "RWF"}, "fineract": {"gl_code": "94412955", "name": "Sim Clash 441295", "type": "ASSET", "external_reference": null}, "differences": [], "note": "Fineract GL account 94412955 already exists with no external reference; sync never adopts an existing account"}
+  [PASS] after sync: report answers 200
+  [PASS] after sync: MATCHED is MATCHED
+  [PASS] after sync: RENAMED is DETAILS_MISMATCH
+  [PASS] after sync: NOT-SYNCED is MATCHED
+  [PASS] after sync: BRANCH is MISSING_IN_ERP
+  [PASS] after sync: ORPHAN is MISSING_IN_ERP
+  [PASS] after sync: CLASH is CODE_CONFLICT
+  [PASS] CLASH sync was refused, not adopted
+  [PASS] RENAMED was not overwritten by the create-only sync
+
+23/23 checks passed

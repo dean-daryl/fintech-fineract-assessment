@@ -18,6 +18,7 @@ from app.db import Base, SessionLocal, engine
 from app.faults import FaultInjector
 from app.logs import configure_logging, correlation_id
 from app.services.clients import ClientCreation, ClientService
+from app.services.gl_reconciliation import GLReconciliationService
 from app.services.gl_sync import GLSyncService
 from app.services.loans import LoanService
 from app.services.operations import OperationStore
@@ -69,6 +70,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     loans = LoanService(SessionLocal, pipeline, fineract, settings)
     repair = ErpPostingRepair(SessionLocal, fineract, erp)
     app.state.reconciliation = ReconciliationService(SessionLocal, fineract, erp)
+    app.state.gl_reconciliation = GLReconciliationService(SessionLocal, fineract, erp, settings.tenant_currency)
     app.state.repairs = RepairService(pipeline, repair)
     app.state.pipeline = pipeline
     app.state.store = store

@@ -5,6 +5,7 @@ import httpx
 
 from app.domain.clients import FineractClientPayload, FineractClientRecord, parse_fineract_client
 from app.domain.gl_mapping import FineractGLAccountPayload
+from app.domain.gl_reconciliation import FineractGLAccount, parse_fineract_gl_account
 from app.domain.loans import (
     FineractLoanRecord,
     FineractLoanTransaction,
@@ -73,6 +74,9 @@ class FineractClient:
                 return None
             raise
         return int(body["id"])
+
+    def list_gl_accounts(self) -> list[FineractGLAccount]:
+        return [parse_fineract_gl_account(body) for body in self._request_list("GET", "/glaccounts")]
 
     def find_office_id(self, name: str) -> int | None:
         offices = self._request_list("GET", "/offices")

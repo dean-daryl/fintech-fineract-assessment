@@ -556,4 +556,41 @@ If Fineract reprocesses later repayments after a reversal and changes their spli
 - "Loan entry" is decided by account (1200, 4100, 2100). A manual ERP journal on those accounts that has nothing to do with a loan shows as `MISSING_IN_FINERACT`. A `source` field on ERP entries would be more exact, but it changes the ERP schema.
 - Date mode selects Fineract transactions by their transaction date. A transaction dated before the range but reversed inside it is not picked up by that range.
 - Reports are not stored. Each call recomputes from the live systems.
-- GL (master-data) discrepancies are not reconciled: a stretch item.
+- GL (master-data) discrepancies are reconciled separately (D-025).
+
+## D-025: GL master-data reconciliation (Part L, stretch)
+
+**Decision.** `GET /api/reconciliation/gl-accounts` compares Fineract's chart of accounts with the ERP's and returns one row per account found on either side. Same layout as D-024: the comparison is a pure function (`domain/gl_reconciliation.py`, `tests/test_gl_reconciliation.py`), and `services/gl_reconciliation.py` only gathers the two sides.
+
+**Why `GET`.** It takes no input and changes nothing, so it writes no operation row and takes no `external_reference`. Part K uses `POST` only because the brief names it and reference mode needs a body (D-024). If Fineract or the ERP can't be reached: 503 and no partial report.
+
+**Gathering the two sides.**
+- **ERP:** `GET /api/accounts`, the whole chart.
+- **Fineract:** the stock `GET /glaccounts`. Patch 0001 adds `externalReference` to the shared row mapper (D-007), so the stock list already returns it. No new endpoint. A JUnit integration test in the patch proves the list returns the reference for a synced account and `null` for a stock one, because this report depends on it. The least-privilege user already has `READ_GLACCOUNT` (D-013).
+- **Header accounts are skipped.** Sync only creates detail accounts (D-008), and the ERP has no header concept.
+- **`sync_status`** from `gl_account_sync` is added to each row, the same way D-024 adds `operation_status`. It is context, not a source: the comparison never reads it.
+
+**Pairing.** By the ERP `external_reference` that sync stores on the Fineract account. If an ERP account has no linked Fineract account, its code is checked against every Fineract account, so a clash is named rather than reported as two unrelated gaps.
+
+| Case | Status |
+|---|---|
+| Same reference; code, name and type agree | `MATCHED` |
+| ERP account, no Fineract account with its reference or code | `MISSING_IN_FINERACT` |
+| Fineract account with no reference (created outside the sync), or with a reference the ERP does not hold | `MISSING_IN_ERP` |
+| ERP account whose code is already used by a Fineract account with another or no reference | `CODE_CONFLICT`: one row with both sides. Sync answers 409 for it and never adopts an existing account (D-007) |
+| Same reference, but code, name or type differ | `DETAILS_MISMATCH`, with `differences` such as `name: ERP 'Cash at Bank', Fineract 'Cash'` |
+
+- **What is compared:** code, name and type, the fields sync writes. The type is compared through `ERP_TO_FINERACT_GL_TYPE`, the same table sync uses (D-008), so the two can't drift.
+- **Not compared:** usage, disabled and manual-entries flags, and the description. The ERP has no such fields.
+- **Mapping errors are reported, not hidden.** If `to_fineract_gl_account` would refuse an ERP account (wrong currency, unknown type, name over 45 characters), the row carries that error as its `note`. A `MISSING_IN_FINERACT` row then says why sync will never create it.
+- **No Fineract numeric ids** in the response (rule 6). Rows are keyed by `external_reference` and `gl_code`.
+
+**No repair.** Sync is create-only (rule 12), and Fineract is never changed from a report. `MISSING_IN_FINERACT` is fixed by the normal `POST /api/gl-accounts/sync`. Every other status needs a person: deciding whether the ERP or the back office renamed an account, or which of two accounts owns a code, is a business decision.
+
+**Evidence.** `make simulate-gl-reconciliation` (S-L1 to S-L3): one account per outcome, the report twice with row counts before and after, then a sync and the report again.
+
+**Known weaknesses.**
+- The report covers the whole chart. Leftovers from earlier simulation runs, or anything a back office added, appear in the summary. There is no filter by reference or code.
+- Both sides are read in full on every call. That's fine for a chart of accounts, which is small and changes rarely.
+- Fineract's stock `PUT /glaccounts/{id}` can still rename or recode a synced account. The patch does not block it (outside rule 11's scope); this report is how it is detected.
+- Reports are not stored, and nothing runs on a schedule. Each call reads both systems live.

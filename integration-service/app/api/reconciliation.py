@@ -8,8 +8,10 @@ from pydantic import BaseModel, Field, model_validator
 from app.clients.erp import ErpError
 from app.clients.fineract import FineractError
 from app.domain.accounting import JournalLine
+from app.domain.gl_reconciliation import GLReconciliationItem, GLReconciliationStatus
 from app.domain.loans import LOAN_REFERENCE_PATTERN
 from app.domain.reconciliation import ReconciliationItem, ReconciliationStatus, base_reference
+from app.services.gl_reconciliation import GLReconciliationService
 from app.services.reconciliation import ReconciliationReport, ReconciliationService, RepairService
 
 router = APIRouter(tags=["reconciliation"])
@@ -156,6 +158,71 @@ def reconcile(body: ReconciliationIn, request: Request) -> ReconciliationOut:
     except ErpError as exc:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "the ERP is unavailable; no partial report is returned") from exc
     return _out(body, report)
+
+
+class ErpAccountOut(BaseModel):
+    code: str
+    name: str
+    type: str
+    currency: str
+
+
+class FineractGLAccountOut(BaseModel):
+    gl_code: str
+    name: str
+    type: str
+    external_reference: str | None
+
+
+class GLReconciliationItemOut(BaseModel):
+    external_reference: str | None
+    gl_code: str
+    status: GLReconciliationStatus
+    sync_status: str | None
+    erp: ErpAccountOut | None
+    fineract: FineractGLAccountOut | None
+    differences: list[str]
+    note: str | None
+
+
+class GLReconciliationOut(BaseModel):
+    summary: dict[GLReconciliationStatus, int]
+    items: list[GLReconciliationItemOut]
+
+
+def _gl_item(item: GLReconciliationItem, sync_statuses: dict[str, str]) -> GLReconciliationItemOut:
+    return GLReconciliationItemOut(
+        external_reference=item.external_reference,
+        gl_code=item.gl_code,
+        status=item.status,
+        sync_status=sync_statuses.get(item.external_reference) if item.external_reference else None,
+        erp=ErpAccountOut(code=item.erp.code, name=item.erp.name, type=item.erp.type, currency=item.erp.currency) if item.erp else None,
+        fineract=FineractGLAccountOut(
+            gl_code=item.fineract.gl_code,
+            name=item.fineract.name,
+            type=item.fineract.type_name,
+            external_reference=item.fineract.external_reference,
+        )
+        if item.fineract
+        else None,
+        differences=list(item.differences),
+        note=item.note,
+    )
+
+
+@router.get("/reconciliation/gl-accounts", response_model=GLReconciliationOut)
+def reconcile_gl_accounts(request: Request) -> GLReconciliationOut:
+    service: GLReconciliationService = request.app.state.gl_reconciliation
+    try:
+        report = service.report()
+    except FineractError as exc:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Fineract is unavailable; no partial report is returned") from exc
+    except ErpError as exc:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "the ERP is unavailable; no partial report is returned") from exc
+    summary = {s: 0 for s in GLReconciliationStatus}
+    for item in report.items:
+        summary[item.status] += 1
+    return GLReconciliationOut(summary=summary, items=[_gl_item(item, report.sync_statuses) for item in report.items])
 
 
 @router.post("/reconciliation/repairs", status_code=status.HTTP_201_CREATED)

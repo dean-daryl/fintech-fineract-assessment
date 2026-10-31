@@ -196,3 +196,51 @@ All five scenarios run on one loan with `make simulate-failures` (needs `FAULT_I
   - A `-REV` for a transaction that isn't reversed gets 409.
 - **After:** the date-range report shows `MATCHED 5, MISSING_IN_FINERACT 1, AMOUNT_MISMATCH 1`. The two rows a person must resolve are still there.
 - **Explanation:** the report reads Fineract live and builds the expected entry with the same mapping the posting step uses (D-021), so it compares against Fineract's numbers. Repair only adds what is missing in the ERP. It goes through the operations pipeline, so it is idempotent on its own reference, and the ERP's unique `external_reference` makes it idempotent per transaction as well.
+
+## Part L evidence at a glance
+
+`make simulate-gl-reconciliation` seeds one GL account for each master-data outcome with codes no other run uses. It reports twice, runs the GL sync, then reports again. Evidence: `evidence/simulate-gl-reconciliation.log`, **23/23 checks PASS**. Design: DECISIONS.md D-025.
+
+| # | What | Log lines |
+|---|---|---|
+| S-L1 | Seed every outcome | 1–11 |
+| S-L2 | Report, twice, read-only | 12–44 |
+| S-L3 | GL sync, then report again | 45–65 |
+
+## S-L1: Seeding the outcomes
+
+- **Initial state:** the bootstrapped stack. Every code and reference carries the run number (here `441295`, prefix `SIML-441295`).
+- **Seeds:**
+
+| Reference / code | How | Expected |
+|---|---|---|
+| `SIML-441295-MATCHED` / `94412950` | ERP account, synced through `POST /api/gl-accounts/sync` | `MATCHED` |
+| `SIML-441295-RENAMED` / `94412951` | ERP account, synced, then renamed with Fineract's stock `PUT /glaccounts/{id}` | `DETAILS_MISMATCH` |
+| `SIML-441295-NOT-SYNCED` / `94412952` | ERP account created after the sync | `MISSING_IN_FINERACT` |
+| `94412953` | Fineract's stock `POST /glaccounts`, no external reference | `MISSING_IN_ERP` |
+| `SIML-441295-ORPHAN` / `94412954` | Fineract `POST /glaccounts/sync` with a reference the ERP never had | `MISSING_IN_ERP` |
+| `SIML-441295-CLASH` / `94412955` | Fineract's stock `POST /glaccounts`, then an ERP account with the same code | `CODE_CONFLICT` |
+
+- The direct Fineract calls use the admin user and stand in for a back-office user working outside the integration.
+
+## S-L2: The report
+
+- **Request:** `GET /api/reconciliation/gl-accounts`, twice.
+- **Response:** every seeded account got its expected status.
+  - `RENAMED` lists `name: ERP 'Sim Renamed 441295', Fineract 'Sim Renamed 441295 (edited)'`.
+  - `CLASH` is one row carrying both sides, with the note that sync never adopts an existing account.
+  - The two `MISSING_IN_ERP` rows say why: no external reference, or a reference the ERP does not hold.
+  - `NOT-SYNCED` has `sync_status: null`.
+  - No Fineract numeric ids appear.
+- **Read-only:** Fineract GL accounts and ERP accounts were 14 and 13 before and after both calls. Both calls returned the same rows.
+
+## S-L3: Sync, then report again
+
+- **Request:** `POST /api/gl-accounts/sync`, then the report.
+- **Result:**
+  - `NOT-SYNCED` is now `MATCHED` (`sync_status: SYNCED`).
+  - `CLASH` stays `CODE_CONFLICT` with `sync_status: FAILED`, because Fineract refused it with `error.msg.glaccount.glcode.conflict`. The existing account was not adopted.
+  - `RENAMED` still shows the edited name. Sync is create-only and did not overwrite it.
+  - The other rows are unchanged.
+- **Explanation:** the report reads both systems live and compares the fields sync writes. It changes nothing. The only automatic fix is the normal sync, which closes `MISSING_IN_FINERACT` gaps. The other statuses need a person (D-025).
+

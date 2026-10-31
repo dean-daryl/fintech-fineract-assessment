@@ -37,6 +37,9 @@ class FineractLoanTransaction:
     amount: int
     principal_portion: int
     interest_portion: int
+    fee_charges_portion: int
+    penalty_charges_portion: int
+    overpayment_portion: int
     outstanding_after: int
     reversed: bool
 
@@ -161,6 +164,9 @@ def parse_loan_transaction(body: dict[str, Any]) -> FineractLoanTransaction:
         amount=to_amount(body.get("amount")),
         principal_portion=to_amount(body.get("principalPortion")),
         interest_portion=to_amount(body.get("interestPortion")),
+        fee_charges_portion=to_amount(body.get("feeChargesPortion")),
+        penalty_charges_portion=to_amount(body.get("penaltyChargesPortion")),
+        overpayment_portion=to_amount(body.get("overpaymentPortion")),
         outstanding_after=to_amount(body.get("outstandingLoanBalance")),
         reversed=bool(body.get("manuallyReversed")),
     )

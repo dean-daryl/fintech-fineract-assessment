@@ -366,3 +366,38 @@ Partners identify clients and loans only by business ids. Fineract's numeric ids
 - No reversal endpoint and no period close. A wrong entry can only be corrected by a new, offsetting entry, which is also how a real ledger works.
 - The line order is part of the hash: the same lines in another order are a different payload (409).
 - `create_all` creates the new tables on an existing database, but the chart only exists after the ERP restarts with the seed.
+
+## D-021: Accounting mapping (Part H)
+
+**Decision.** `app/domain/accounting.py` turns one Fineract loan transaction into one ERP journal entry. `journal_entry_for(transaction, loan_reference)` is a pure function with no I/O, unit-tested in `tests/test_accounting.py`. It takes the transaction as `parse_loan_transaction` reads it from Fineract and never computes an amount itself.
+
+**Where the principal/interest split comes from.** Fineract allocates every repayment when it books it. The loan's transaction processing strategy (`mifos-standard-strategy`, D-012) applies the payment to the schedule in the order penalties, fees, interest, principal, using the installments that are due on the transaction date. Fineract stores the result on the transaction (`principalPortion`, `interestPortion`, `feeChargesPortion`, `penaltyChargesPortion`, `overpaymentPortion`), and `GET /loans/external-id/{loan_reference}/transactions/external-id/{external_reference}` returns it. The mapping copies those portions. It does not know the rate, the schedule or the allocation order, so it cannot disagree with Fineract (rule 5). Fineract's own cash-accounting journal for the same transaction uses the same portions, which a later reconciliation can compare line by line (`GET /journalentries?transactionId=L<id>`).
+
+**Lines** (account codes from D-011):
+
+| Fineract transaction | Debit | Credit |
+|---|---|---|
+| Disbursement | 1200 Loan Receivable: `amount` | 1100 Cash at Bank: `amount` |
+| Repayment | 1100 Cash at Bank: `amount` | 1200 Loan Receivable: `principalPortion`; 4100 Interest Income: `interestPortion`; 2100 Loan Overpayments: `overpaymentPortion` |
+
+- **One entry per Fineract transaction.** The entry's `external_reference` is the transaction's `externalId`, which is our operation's `external_reference` (D-017). The ERP's unique reference then means a resend can never post twice. The later ERP step can look the entry up by that reference before resending (rule 4).
+- **The entry date is Fineract's transaction date**, not today, so a backdated repayment lands in the right period.
+- **The description names the `loan_reference`**, never a Fineract id (rule 6).
+- **Zero lines are left out.** A repayment with no interest has no 4100 line. The ERP rejects lines with neither a debit nor a credit.
+- **The mapping refuses instead of guessing.** It raises `AccountingMappingError` when:
+  - the portions do not add up to the amount
+  - a repayment carries fee or penalty portions (SAF has no charges, D-012)
+  - a disbursement carries any portion other than principal
+  - the transaction is reversed, or has no external reference, no date or a non-positive amount
+  - the type is not a disbursement or a repayment (accruals, waivers, write-offs and the rest)
+
+  Plugging a difference into some account would hide exactly the disagreement the books exist to catch. The function also checks that the entry balances before returning it; the ERP checks again on its side.
+
+**Overpayments.** The repayment route rejects any amount above Fineract's live outstanding balance (D-017), so in normal use no overpayment portion exists. The two-concurrent-repayments race in D-017 can still produce one. Fineract then books the excess as `overpaymentPortion`, and the mapping credits it to 2100 Loan Overpayments, a liability: money owed back to the client, not income. This matches the product's `overpaymentLiabilityAccountId` mapping (D-011). Refunding it would be a separate Fineract transaction (credit balance refund), mapped DR 2100 / CR 1100; not built.
+
+**Reversals.** ERP entries are immutable (D-020), so a reversed Fineract transaction is never edited or deleted in the ERP. `reversal_of(entry, reversed_on)` builds the offsetting entry: the same accounts with debits and credits swapped, reference `<original>-REV`, dated on the day of the reversal. The original entry plus its reversal net to zero, and both stay in the audit trail. If Fineract then re-processes the loan (a reversed earlier repayment can change how later repayments were split), each changed transaction gets its own reversal and a new entry with its new portions. The service has no undo endpoint (D-017), so `reversal_of` is tested but not connected to anything yet.
+
+**Known weaknesses.**
+- Fees, penalties, waivers, write-offs and accruals have no mapping; they raise. The product has none of them (D-010, D-012).
+- The account codes are constants matching D-011. If the product's GL mappings change in Fineract, this module must change with them. Reading the product's mappings at runtime would remove that coupling; not built.
+- Not yet called by the pipeline. Disbursements and repayments still skip `ERP_PENDING` (D-017) until the ERP posting step is built.

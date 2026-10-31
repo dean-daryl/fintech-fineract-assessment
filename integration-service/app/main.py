@@ -57,8 +57,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         verify_tls=settings.fineract_tls_verify,
         timeout_seconds=settings.fineract_timeout_seconds,
     )
-    erp = ErpClient(settings.erp_base_url)
-    pipeline = OperationPipeline(OperationStore(SessionLocal, settings.operation_lease_seconds), settings)
+    erp = ErpClient(settings.erp_base_url, settings.erp_timeout_seconds)
+    pipeline = OperationPipeline(OperationStore(SessionLocal, settings.operation_lease_seconds), erp, settings)
     app.state.gl_sync = GLSyncService(SessionLocal, erp, fineract, pipeline, settings)
     clients = ClientService(pipeline, ClientCreation(SessionLocal, fineract, settings), fineract)
     loans = LoanService(SessionLocal, pipeline, fineract, settings)

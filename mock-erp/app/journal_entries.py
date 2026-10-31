@@ -15,6 +15,8 @@ router = APIRouter(prefix="/api/journal-entries", tags=["journal-entries"])
 
 SessionDep = Annotated[Session, Depends(get_session)]
 
+ENTRY_ID_PREFIX = "JE-"
+
 
 class JournalLineIn(BaseModel):
     account_code: str = Field(min_length=1, max_length=45)
@@ -38,6 +40,7 @@ class JournalLineOut(BaseModel):
 
 
 class JournalEntryOut(BaseModel):
+    id: str
     external_reference: str
     entry_date: date
     description: str
@@ -50,6 +53,7 @@ class JournalEntryOut(BaseModel):
 
 def _out(entry: JournalEntry) -> JournalEntryOut:
     return JournalEntryOut(
+        id=f"{ENTRY_ID_PREFIX}{entry.id:06d}",
         external_reference=entry.external_reference,
         entry_date=entry.entry_date,
         description=entry.description,

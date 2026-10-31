@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.clients.fineract import FineractClient, FineractTimeoutError
 from app.config import Settings
+from app.domain.accounting import JournalEntry, journal_entry_for
 from app.domain.clients import validate_client
 from app.domain.loans import (
     FineractLoanRecord,
@@ -46,6 +47,11 @@ class _LoanOperation:
     def record(self, operation: Operation, outcome: FineractOutcome) -> None:
         return None
 
+    def journal_entry(self, operation: Operation, outcome: FineractOutcome) -> JournalEntry | None:
+        if outcome.transaction is None:
+            return None
+        return journal_entry_for(outcome.transaction, operation.payload["loan_reference"])
+
     def describe(self, operation: Operation) -> dict[str, Any]:
         return {"loan_reference": operation.payload["loan_reference"]}
 
@@ -68,7 +74,7 @@ class _LoanOperation:
             return None
         if transaction.type.lower() != expected_type:
             raise OperationRejected(409, f"external_reference is already used by a Fineract {transaction.type.lower()} transaction")
-        return FineractOutcome(transaction.fineract_id, _transaction_details(transaction))
+        return FineractOutcome(transaction.fineract_id, _transaction_details(transaction), transaction)
 
     def _visible(self, outcome: FineractOutcome | None) -> FineractOutcome:
         if outcome is None:

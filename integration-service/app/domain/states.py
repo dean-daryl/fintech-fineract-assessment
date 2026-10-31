@@ -27,7 +27,9 @@ TRANSITIONS: dict[OperationStatus, frozenset[OperationStatus]] = {
     OperationStatus.FINERACT_PENDING: frozenset(
         {OperationStatus.FINERACT_DONE, OperationStatus.FAILED, OperationStatus.NEEDS_RECONCILIATION}
     ),
-    OperationStatus.FINERACT_DONE: frozenset({OperationStatus.ERP_PENDING, OperationStatus.COMPLETED}),
+    OperationStatus.FINERACT_DONE: frozenset(
+        {OperationStatus.ERP_PENDING, OperationStatus.COMPLETED, OperationStatus.NEEDS_RECONCILIATION}
+    ),
     OperationStatus.ERP_PENDING: frozenset({OperationStatus.COMPLETED, OperationStatus.NEEDS_RECONCILIATION}),
     OperationStatus.COMPLETED: frozenset(),
     OperationStatus.FAILED: frozenset(),
@@ -40,8 +42,6 @@ OPERATIONS_WITHOUT_ERP_STEP: frozenset[OperationType] = frozenset(
         OperationType.CREATE_CLIENT,
         OperationType.CREATE_LOAN,
         OperationType.APPROVE_LOAN,
-        OperationType.DISBURSE_LOAN,
-        OperationType.REPAY_LOAN,
     }
 )
 
@@ -55,11 +55,14 @@ class InvalidTransitionError(Exception):
         super().__init__(f"{operation_type}: {current} -> {target} is not allowed")
 
 
+def has_erp_step(operation_type: OperationType) -> bool:
+    return operation_type not in OPERATIONS_WITHOUT_ERP_STEP
+
+
 def check_transition(operation_type: OperationType, current: OperationStatus, target: OperationStatus) -> None:
     if target not in TRANSITIONS[current]:
         raise InvalidTransitionError(operation_type, current, target)
-    has_erp_step = operation_type not in OPERATIONS_WITHOUT_ERP_STEP
-    if current is OperationStatus.FINERACT_DONE and (target is OperationStatus.ERP_PENDING) != has_erp_step:
+    if current is OperationStatus.FINERACT_DONE and (target is OperationStatus.COMPLETED) == has_erp_step(operation_type):
         raise InvalidTransitionError(operation_type, current, target)
 
 

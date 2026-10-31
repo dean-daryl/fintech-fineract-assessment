@@ -17,6 +17,7 @@ from app.clients.fineract import (
     FineractUnavailableError,
 )
 from app.config import Settings
+from app.domain.accounting import JournalEntry
 from app.domain.gl_mapping import (
     ErpAccount,
     FineractGLAccountPayload,
@@ -70,6 +71,9 @@ class GLAccountsSync:
         return FineractOutcome(None, {"accounts": [account_view(row) for row in self._service.list_statuses()]})
 
     def record(self, operation: Operation, outcome: FineractOutcome) -> None:
+        return None
+
+    def journal_entry(self, operation: Operation, outcome: FineractOutcome) -> JournalEntry | None:
         return None
 
     def describe(self, operation: Operation) -> dict[str, Any]:

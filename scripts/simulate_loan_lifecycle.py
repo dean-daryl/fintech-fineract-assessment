@@ -4,6 +4,8 @@ Client onboarding, application, approval, disbursement, three partial repayments
 Fineract's total outstanding, ending in "Closed (obligations met)". Along the way it checks that a repeated
 request executes once, that ten parallel disbursements with different references disburse once, that a
 reused reference with a different payload gets 409, and that no response carries a Fineract numeric id.
+Every disbursement and repayment must also land in the ERP as exactly one journal entry carrying Fineract's
+own principal/interest split, and the ERP balances must move by exactly Fineract's amounts.
 
 Every run uses a new client_uid and new references, so it can be re-run on the same stack.
 Uses only the standard library so it runs on the host without a virtualenv.
@@ -22,6 +24,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
 INTEGRATION_URL = os.environ.get("INTEGRATION_URL", "http://localhost:8000")
+ERP_URL = os.environ.get("ERP_URL", "http://localhost:8001")
 FINERACT_URL = os.environ.get("FINERACT_URL", "https://localhost:8443/fineract-provider/api/v1")
 FINERACT_AUTH = base64.b64encode(
     f"{os.environ.get('FINERACT_API_USERNAME', 'integration-api')}:{os.environ.get('FINERACT_API_PASSWORD', '')}".encode()
@@ -37,6 +40,7 @@ ACTIVATION_DATE = "2026-03-01"
 LOAN_DATE = "2026-04-01"
 REPAYMENT_DATES = ["2026-05-01", "2026-06-01", "2026-07-01"]
 PAYOFF_DATE = "2026-08-01"
+LEDGER_ACCOUNTS = ("1100", "1200", "4100")
 FINERACT_ID_KEYS = {"id", "resourceId", "clientId", "loanId", "officeId", "fineract_id", "fineract_client_id", "fineract_loan_id"}
 
 checks: list[tuple[str, bool]] = []
@@ -60,6 +64,32 @@ def ours(method: str, path: str, body: dict[str, Any] | None = None) -> tuple[in
     code, payload = call(method, f"{INTEGRATION_URL}{path}", body)
     responses.append(payload)
     return code, payload
+
+
+def erp_balances() -> dict[str, int]:
+    return {code: call("GET", f"{ERP_URL}/api/accounts/{code}/balance")[1]["balance"] for code in LEDGER_ACCOUNTS}
+
+
+def erp_lines(reference: str) -> tuple[int, Any, list[tuple[str, int, int]] | None]:
+    code, entry = call("GET", f"{ERP_URL}/api/journal-entries/{reference}")
+    lines = [(line["account_code"], line["debit"], line["credit"]) for line in entry["lines"]] if code == 200 else None
+    print(f"  ERP GET /api/journal-entries/{reference} -> {code} {entry.get('id') if code == 200 else entry} {lines or ''}")
+    return code, entry, lines
+
+
+def check_journal_entry(reference: str, body: dict[str, Any], expected: list[tuple[str, int, int]]) -> None:
+    code, entry, lines = erp_lines(reference)
+    check(f"ERP has the journal entry for {reference} with Fineract's numbers", code == 200 and lines == expected)
+    check("our response carries the ERP's transaction id", code == 200 and body.get("erp_transaction_id") == entry["id"])
+
+
+def repayment_lines(amount: int, principal: int, interest: int) -> list[tuple[str, int, int]]:
+    lines = [("1100", amount, 0)]
+    if principal:
+        lines.append(("1200", 0, principal))
+    if interest:
+        lines.append(("4100", 0, interest))
+    return lines
 
 
 def check(name: str, ok: bool) -> None:
@@ -155,6 +185,9 @@ def main() -> int:
     state = stage("approval", loan_reference)
     check("Fineract status: Approved", state.get("status") == "Approved")
 
+    balances_before = erp_balances()
+    print(f"\n  ERP balances before disbursement: {balances_before}")
+
     print("\n4. Disbursement: 10 parallel requests, each with a different external_reference")
     results = parallel(
         10,
@@ -172,6 +205,11 @@ def main() -> int:
     disbursements = [t for t in state.get("transactions", []) if t[0] == "Disbursement"]
     check("Fineract: one disbursement, status Active", len(disbursements) == 1 and state.get("status") == "Active")
     check(f"Fineract principal disbursed is {PRINCIPAL}", state.get("principalDisbursed") == PRINCIPAL)
+    if winner:
+        check_journal_entry(winner["external_reference"], winner, [("1200", PRINCIPAL, 0), ("1100", 0, PRINCIPAL)])
+        losers = [body["external_reference"] for code, body in results if code == 409]
+        missing = [call("GET", f"{ERP_URL}/api/journal-entries/{reference}")[0] for reference in losers]
+        check("the nine rejected disbursements have no ERP entry (404)", missing == [404] * 9)
 
     for number, repayment_date in enumerate(REPAYMENT_DATES, start=1):
         print(f"\n{4 + number}. Partial repayment {number}: {PARTIAL_REPAYMENT} RWF on {repayment_date}")
@@ -181,6 +219,7 @@ def main() -> int:
             print(f"  same request sent 4 times -> {[code for code, _ in results]}")
             code, body = results[0]
             check("4 identical requests: one 201 then three 200 with the same body", [c for c, _ in results] == [201, 200, 200, 200] and all(b == body for _, b in results))
+            check("all 4 responses name the same ERP journal entry", len({b.get("erp_transaction_id") for _, b in results}) == 1)
         else:
             code, body = ours("POST", f"/api/loans/{loan_reference}/repayments", repayment)
         show("POST /api/loans/{ref}/repayments", code, body)
@@ -190,6 +229,7 @@ def main() -> int:
         check(f"Fineract has exactly one transaction for {repayment['external_reference']}", len(matching) == 1)
         if matching:
             check("our response carries Fineract's own portions", (matching[0][3], matching[0][4]) == (body["principal_portion"], body["interest_portion"]))
+            check_journal_entry(repayment["external_reference"], body, repayment_lines(int(matching[0][2]), int(matching[0][3]), int(matching[0][4])))
 
     print(f"\n8. Final payoff on {PAYOFF_DATE}")
     code, loan = ours("GET", f"/api/loans/{loan_reference}")
@@ -205,13 +245,27 @@ def main() -> int:
     state = stage("final payoff", loan_reference)
     check("Fineract status: Closed (obligations met)", state.get("status") == "Closed (obligations met)")
     check("Fineract total outstanding is 0", state.get("totalOutstanding") == 0)
+    payoff_transaction = next((t for t in state.get("transactions", []) if t[1] == f"SIM-{RUN}-PAYOFF"), None)
+    if payoff_transaction:
+        check_journal_entry(f"SIM-{RUN}-PAYOFF", body, repayment_lines(int(payoff_transaction[2]), int(payoff_transaction[3]), int(payoff_transaction[4])))
 
-    print("\n9. Our view of the loan")
+    print("\n9. The ERP ledger moved by Fineract's amounts, once")
+    repayments = [t for t in state.get("transactions", []) if t[0] == "Repayment"]
+    repaid = sum(int(t[2]) for t in repayments)
+    interest = sum(int(t[4]) for t in repayments)
+    balances_after = erp_balances()
+    moved = {code: balances_after[code] - balances_before[code] for code in LEDGER_ACCOUNTS}
+    expected = {"1100": repaid - PRINCIPAL, "1200": 0, "4100": interest}
+    print(f"  ERP balances after payoff: {balances_after}")
+    print(f"  moved {moved}; expected from Fineract's transactions {expected} (repaid {repaid}, interest {interest})")
+    check("ERP balances moved by exactly Fineract's disbursement and repayments", moved == expected)
+
+    print("\n10. Our view of the loan")
     code, loan = ours("GET", f"/api/loans/{loan_reference}")
     print(json.dumps(loan, indent=2))
     check("GET /api/loans/{ref} reports Fineract's status", loan.get("status") == "Closed (obligations met)")
 
-    print("\n10. No Fineract numeric ids in any response")
+    print("\n11. No Fineract numeric ids in any response")
     leaked = find_keys(responses, FINERACT_ID_KEYS)
     print(f"  scanned {len(responses)} responses, keys found: {sorted(leaked) or 'none'}")
     check("no Fineract id keys in our responses", not leaked)

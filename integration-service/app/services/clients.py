@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.clients.fineract import FineractClient
 from app.config import Settings
+from app.domain.accounting import JournalEntry
 from app.domain.clients import (
     ClientValidation,
     CreateClient,
@@ -71,6 +72,9 @@ class ClientCreation:
                 .where(ClientMap.client_uid == operation.payload["client_uid"], ClientMap.operation_id == operation.id)
                 .values(fineract_client_id=outcome.resource_id)
             )
+
+    def journal_entry(self, operation: Operation, outcome: FineractOutcome) -> JournalEntry | None:
+        return None
 
     def describe(self, operation: Operation) -> dict[str, Any]:
         return {"client_uid": operation.payload["client_uid"], "name": operation.payload["name"]}

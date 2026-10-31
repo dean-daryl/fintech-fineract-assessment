@@ -65,6 +65,8 @@ class OperationStore:
         *,
         fineract_resource_id: int | None = None,
         erp_transaction_id: str | None = None,
+        erp_request: dict[str, Any] | None = None,
+        reset_attempts: bool = False,
         response_code: int | None = None,
         response: dict[str, Any] | None = None,
         last_error: str | None = None,
@@ -77,6 +79,10 @@ class OperationStore:
                 row.fineract_resource_id = fineract_resource_id
             if erp_transaction_id is not None:
                 row.erp_transaction_id = erp_transaction_id
+            if erp_request is not None:
+                row.erp_request = erp_request
+            if reset_attempts:
+                row.attempts = 0
             if last_error is not None:
                 row.last_error = last_error
             if response_code is not None:
@@ -130,4 +136,4 @@ class OperationStore:
 
     @staticmethod
     def _log_fields(row: Operation) -> dict[str, Any]:
-        return {"external_reference": row.external_reference, "status": row.status}
+        return {"external_reference": row.external_reference, "erp_transaction_id": row.erp_transaction_id, "status": row.status}

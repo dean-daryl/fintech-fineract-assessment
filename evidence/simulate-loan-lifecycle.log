@@ -1,0 +1,229 @@
+Run 431968: client SME-431968 'Simulation Traders 431968 Ltd', principal 5000000 RWF, product SAF (18%/year, 12 months)
+
+1. Onboard the client
+  POST /api/clients -> 201 {"external_reference": "SIM-431968-CLIENT", "client_uid": "SME-431968", "name": "Simulation Traders 431968 Ltd", "operation_status": "COMPLETED"}
+  [PASS] client created (201)
+  GET /api/clients/{uid}/validation -> 200 {"client_uid": "SME-431968", "valid": true, "exists": true, "active": true, "name_matches": true}
+  [PASS] client valid: exists, active, name matches
+
+2. Loan application
+  POST /api/loans -> 201 {"external_reference": "SIM-431968-APPLY", "loan_reference": "LN-2026-000003", "client_uid": "SME-431968", "principal": 5000000, "operation_status": "COMPLETED"}
+  [PASS] application created (201)
+  [PASS] same application again returns the same loan_reference (200)
+  [PASS] same reference, different principal -> 409
+
+  Fineract after application:
+    status                 Submitted and pending approval
+    principalDisbursed     None
+    principalOutstanding   None
+    interestOutstanding    None
+    totalRepayment         None
+    totalOutstanding       None
+    transactions           []
+  [PASS] Fineract status: Submitted and pending approval
+
+3. Approval
+  POST /api/loans/{ref}/approval -> 201 {"external_reference": "SIM-431968-APPROVE", "loan_reference": "LN-2026-000003", "operation_status": "COMPLETED", "approved_on_date": "2026-04-01"}
+  [PASS] approved (201)
+
+  Fineract after approval:
+    status                 Approved
+    principalDisbursed     None
+    principalOutstanding   None
+    interestOutstanding    None
+    totalRepayment         None
+    totalOutstanding       None
+    transactions           []
+  [PASS] Fineract status: Approved
+
+  ERP balances before disbursement: {'1100': 500799, '1200': 0, '4100': 500799}
+
+4. Disbursement: 10 parallel requests, each with a different external_reference
+  -> status codes [201, 409, 409, 409, 409, 409, 409, 409, 409, 409]
+  winning disbursement -> 201 {"external_reference": "SIM-431968-DISBURSE-2", "loan_reference": "LN-2026-000003", "operation_status": "COMPLETED", "amount": 5000000, "interest_portion": 0, "transaction_date": "2026-04-01", "outstanding_after": 5000000, "principal_portion": 0, "erp_transaction_id": "JE-000006"}
+  [PASS] exactly one 201, the other nine 409
+
+  Fineract after disbursement:
+    status                 Active
+    principalDisbursed     5000000.0
+    principalOutstanding   5000000.0
+    interestOutstanding    500799.0
+    totalRepayment         0.0
+    totalOutstanding       5500799.0
+    transactions           [('Disbursement', 'SIM-431968-DISBURSE-2', 5000000.0, 0, 0), ('Accrual', None, 500799.0, 0, 500799.0)]
+  [PASS] Fineract: one disbursement, status Active
+  [PASS] Fineract principal disbursed is 5000000
+  ERP GET /api/journal-entries/SIM-431968-DISBURSE-2 -> 200 JE-000006 [('1200', 5000000, 0), ('1100', 0, 5000000)]
+  [PASS] ERP has the journal entry for SIM-431968-DISBURSE-2 with Fineract's numbers
+  [PASS] our response carries the ERP's transaction id
+  [PASS] the nine rejected disbursements have no ERP entry (404)
+
+5. Partial repayment 1: 500000 RWF on 2026-05-01
+  same request sent 4 times -> [201, 200, 200, 200]
+  [PASS] 4 identical requests: one 201 then three 200 with the same body
+  [PASS] all 4 responses name the same ERP journal entry
+  POST /api/loans/{ref}/repayments -> 201 {"external_reference": "SIM-431968-REPAY-1", "loan_reference": "LN-2026-000003", "amount": 500000, "operation_status": "COMPLETED", "interest_portion": 116600, "transaction_date": "2026-05-01", "outstanding_after": 4616600, "principal_portion": 383400, "erp_transaction_id": "JE-000007"}
+  [PASS] repayment 1 split by Fineract: principal + interest = amount
+
+  Fineract after repayment 1:
+    status                 Active
+    principalDisbursed     5000000.0
+    principalOutstanding   4616600.0
+    interestOutstanding    384199.0
+    totalRepayment         500000.0
+    totalOutstanding       5000799.0
+    transactions           [('Disbursement', 'SIM-431968-DISBURSE-2', 5000000.0, 0, 0), ('Accrual', None, 500799.0, 0, 500799.0), ('Repayment', 'SIM-431968-REPAY-1', 500000.0, 383400.0, 116600.0)]
+  [PASS] Fineract has exactly one transaction for SIM-431968-REPAY-1
+  [PASS] our response carries Fineract's own portions
+  ERP GET /api/journal-entries/SIM-431968-REPAY-1 -> 200 JE-000007 [('1100', 500000, 0), ('1200', 0, 383400), ('4100', 0, 116600)]
+  [PASS] ERP has the journal entry for SIM-431968-REPAY-1 with Fineract's numbers
+  [PASS] our response carries the ERP's transaction id
+
+6. Partial repayment 2: 500000 RWF on 2026-06-01
+  POST /api/loans/{ref}/repayments -> 201 {"external_reference": "SIM-431968-REPAY-2", "loan_reference": "LN-2026-000003", "amount": 500000, "operation_status": "COMPLETED", "interest_portion": 91061, "transaction_date": "2026-06-01", "outstanding_after": 4207661, "principal_portion": 408939, "erp_transaction_id": "JE-000008"}
+  [PASS] repayment 2 split by Fineract: principal + interest = amount
+
+  Fineract after repayment 2:
+    status                 Active
+    principalDisbursed     5000000.0
+    principalOutstanding   4207661.0
+    interestOutstanding    293138.0
+    totalRepayment         1000000.0
+    totalOutstanding       4500799.0
+    transactions           [('Disbursement', 'SIM-431968-DISBURSE-2', 5000000.0, 0, 0), ('Accrual', None, 500799.0, 0, 500799.0), ('Repayment', 'SIM-431968-REPAY-1', 500000.0, 383400.0, 116600.0), ('Repayment', 'SIM-431968-REPAY-2', 500000.0, 408939.0, 91061.0)]
+  [PASS] Fineract has exactly one transaction for SIM-431968-REPAY-2
+  [PASS] our response carries Fineract's own portions
+  ERP GET /api/journal-entries/SIM-431968-REPAY-2 -> 200 JE-000008 [('1100', 500000, 0), ('1200', 0, 408939), ('4100', 0, 91061)]
+  [PASS] ERP has the journal entry for SIM-431968-REPAY-2 with Fineract's numbers
+  [PASS] our response carries the ERP's transaction id
+
+7. Partial repayment 3: 500000 RWF on 2026-07-01
+  POST /api/loans/{ref}/repayments -> 201 {"external_reference": "SIM-431968-REPAY-3", "loan_reference": "LN-2026-000003", "amount": 500000, "operation_status": "COMPLETED", "interest_portion": 57487, "transaction_date": "2026-07-01", "outstanding_after": 3765148, "principal_portion": 442513, "erp_transaction_id": "JE-000009"}
+  [PASS] repayment 3 split by Fineract: principal + interest = amount
+
+  Fineract after repayment 3:
+    status                 Active
+    principalDisbursed     5000000.0
+    principalOutstanding   3765148.0
+    interestOutstanding    235651.0
+    totalRepayment         1500000.0
+    totalOutstanding       4000799.0
+    transactions           [('Disbursement', 'SIM-431968-DISBURSE-2', 5000000.0, 0, 0), ('Accrual', None, 500799.0, 0, 500799.0), ('Repayment', 'SIM-431968-REPAY-1', 500000.0, 383400.0, 116600.0), ('Repayment', 'SIM-431968-REPAY-2', 500000.0, 408939.0, 91061.0), ('Repayment', 'SIM-431968-REPAY-3', 500000.0, 442513.0, 57487.0)]
+  [PASS] Fineract has exactly one transaction for SIM-431968-REPAY-3
+  [PASS] our response carries Fineract's own portions
+  ERP GET /api/journal-entries/SIM-431968-REPAY-3 -> 200 JE-000009 [('1100', 500000, 0), ('1200', 0, 442513), ('4100', 0, 57487)]
+  [PASS] ERP has the journal entry for SIM-431968-REPAY-3 with Fineract's numbers
+  [PASS] our response carries the ERP's transaction id
+
+8. Final payoff on 2026-08-01
+  GET /api/loans/{ref} -> total_outstanding 4000799 (read live from Fineract)
+  [PASS] reusing a repayment reference with a different amount -> 409
+  [PASS] paying more than Fineract's outstanding balance -> 422
+  POST /api/loans/{ref}/repayments -> 201 {"external_reference": "SIM-431968-PAYOFF", "loan_reference": "LN-2026-000003", "amount": 4000799, "operation_status": "COMPLETED", "interest_portion": 235651, "transaction_date": "2026-08-01", "outstanding_after": 0, "principal_portion": 3765148, "erp_transaction_id": "JE-000010"}
+  [PASS] payoff accepted (201)
+
+  Fineract after final payoff:
+    status                 Closed (obligations met)
+    principalDisbursed     5000000.0
+    principalOutstanding   0.0
+    interestOutstanding    0.0
+    totalRepayment         5500799.0
+    totalOutstanding       0.0
+    transactions           [('Disbursement', 'SIM-431968-DISBURSE-2', 5000000.0, 0, 0), ('Accrual', None, 500799.0, 0, 500799.0), ('Repayment', 'SIM-431968-REPAY-1', 500000.0, 383400.0, 116600.0), ('Repayment', 'SIM-431968-REPAY-2', 500000.0, 408939.0, 91061.0), ('Repayment', 'SIM-431968-REPAY-3', 500000.0, 442513.0, 57487.0), ('Repayment', 'SIM-431968-PAYOFF', 4000799.0, 3765148.0, 235651.0)]
+  [PASS] Fineract status: Closed (obligations met)
+  [PASS] Fineract total outstanding is 0
+  ERP GET /api/journal-entries/SIM-431968-PAYOFF -> 200 JE-000010 [('1100', 4000799, 0), ('1200', 0, 3765148), ('4100', 0, 235651)]
+  [PASS] ERP has the journal entry for SIM-431968-PAYOFF with Fineract's numbers
+  [PASS] our response carries the ERP's transaction id
+
+9. The ERP ledger moved by Fineract's amounts, once
+  ERP balances after payoff: {'1100': 1001598, '1200': 0, '4100': 1001598}
+  moved {'1100': 500799, '1200': 0, '4100': 500799}; expected from Fineract's transactions {'1100': 500799, '1200': 0, '4100': 500799} (repaid 5500799, interest 500799)
+  [PASS] ERP balances moved by exactly Fineract's disbursement and repayments
+
+10. Our view of the loan
+{
+  "loan_reference": "LN-2026-000003",
+  "client_uid": "SME-431968",
+  "principal": 5000000,
+  "status": "Closed (obligations met)",
+  "balances": {
+    "principal_disbursed": 5000000,
+    "principal_paid": 5000000,
+    "principal_outstanding": 0,
+    "interest_charged": 500799,
+    "interest_paid": 500799,
+    "interest_outstanding": 0,
+    "total_repaid": 5500799,
+    "total_outstanding": 0
+  },
+  "transactions": [
+    {
+      "external_reference": "SIM-431968-DISBURSE-2",
+      "type": "Disbursement",
+      "transaction_date": "2026-04-01",
+      "amount": 5000000,
+      "principal_portion": 0,
+      "interest_portion": 0,
+      "outstanding_after": 5000000,
+      "reversed": false
+    },
+    {
+      "external_reference": null,
+      "type": "Accrual",
+      "transaction_date": "2026-04-01",
+      "amount": 500799,
+      "principal_portion": 0,
+      "interest_portion": 500799,
+      "outstanding_after": 0,
+      "reversed": false
+    },
+    {
+      "external_reference": "SIM-431968-REPAY-1",
+      "type": "Repayment",
+      "transaction_date": "2026-05-01",
+      "amount": 500000,
+      "principal_portion": 383400,
+      "interest_portion": 116600,
+      "outstanding_after": 4616600,
+      "reversed": false
+    },
+    {
+      "external_reference": "SIM-431968-REPAY-2",
+      "type": "Repayment",
+      "transaction_date": "2026-06-01",
+      "amount": 500000,
+      "principal_portion": 408939,
+      "interest_portion": 91061,
+      "outstanding_after": 4207661,
+      "reversed": false
+    },
+    {
+      "external_reference": "SIM-431968-REPAY-3",
+      "type": "Repayment",
+      "transaction_date": "2026-07-01",
+      "amount": 500000,
+      "principal_portion": 442513,
+      "interest_portion": 57487,
+      "outstanding_after": 3765148,
+      "reversed": false
+    },
+    {
+      "external_reference": "SIM-431968-PAYOFF",
+      "type": "Repayment",
+      "transaction_date": "2026-08-01",
+      "amount": 4000799,
+      "principal_portion": 3765148,
+      "interest_portion": 235651,
+      "outstanding_after": 0,
+      "reversed": false
+    }
+  ]
+}
+  [PASS] GET /api/loans/{ref} reports Fineract's status
+
+11. No Fineract numeric ids in any response
+  scanned 27 responses, keys found: none
+  [PASS] no Fineract id keys in our responses
+
+41/41 checks passed

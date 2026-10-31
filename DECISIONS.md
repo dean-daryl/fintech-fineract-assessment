@@ -215,9 +215,11 @@ A failed operation replays its failure. Retrying a failed request needs a new `e
 ```
 RECEIVED -> FINERACT_PENDING -> FINERACT_DONE -> ERP_PENDING -> COMPLETED
 RECEIVED, FINERACT_PENDING -> FAILED
-FINERACT_PENDING, ERP_PENDING -> NEEDS_RECONCILIATION
+FINERACT_PENDING, FINERACT_DONE, ERP_PENDING -> NEEDS_RECONCILIATION
 FINERACT_DONE -> COMPLETED   only for operation types with no ERP step
 ```
+
+`FINERACT_DONE -> NEEDS_RECONCILIATION` is only for types with an ERP step: Fineract moved money but no journal entry could be built (D-022).
 
 - An operation type with no ERP step (client creation) goes `FINERACT_DONE -> COMPLETED`; one with an ERP step must go through `ERP_PENDING`. This is checked per type, so a loan repayment can never skip its journal entry.
 - `FAILED` means nothing happened downstream. `FINERACT_PENDING -> NEEDS_RECONCILIATION` is for when Fineract's outcome stays unknown after every attempt (a timeout, then lookups that also fail).
@@ -287,7 +289,7 @@ Partners identify clients and loans only by business ids. Fineract's numeric ids
 - **The overpayment check reads Fineract's live balance** and rejects anything above it (422), so the loan ends "Closed (obligations met)", never "Overpaid". The final payment is Fineract's own `totalOutstanding`, never our arithmetic.
 - **Amounts are whole RWF** (no minor unit, D-009). Any Fineract amount with a fractional part raises instead of being rounded silently.
 - **Dates.** Partners may send past dates. Fineract allows backdated transactions on this tenant (`disallow-backdated-transactions` is off), and the simulation uses them so the three partial repayments fall on real due dates and carry real interest. Without a date, the service uses today in the tenant timezone.
-- **Disbursement and repayment skip the ERP step for now.** Journal posting is a later part. That part removes them from `OPERATIONS_WITHOUT_ERP_STEP`, and the state machine then forces them through `ERP_PENDING`.
+- **Disbursement and repayment go through the ERP step** (D-022). Client creation, loan application and approval move no money and have none.
 
 **Known weaknesses.**
 - Two different repayments that both pass the overpayment check at the same moment could together exceed the balance. Fineract then records an overpayment. A per-loan lock around the Fineract call would close this; not built.
@@ -400,4 +402,40 @@ Partners identify clients and loans only by business ids. Fineract's numeric ids
 **Known weaknesses.**
 - Fees, penalties, waivers, write-offs and accruals have no mapping; they raise. The product has none of them (D-010, D-012).
 - The account codes are constants matching D-011. If the product's GL mappings change in Fineract, this module must change with them. Reading the product's mappings at runtime would remove that coupling; not built.
-- Not yet called by the pipeline. Disbursements and repayments still skip `ERP_PENDING` (D-017) until the ERP posting step is built.
+- Fineract 1.16.1 lists an `Accrual` transaction on a loan even under cash accounting (seen live: 500,799 RWF, no `externalId`, on a paid-off SAF loan). The mapping never sees it: it only maps the transaction an operation created, looked up by that operation's `external_reference`. It would raise if it were given one.
+
+## D-022: ERP posting step
+
+**Decision.** Disbursements and repayments end with exactly one ERP journal entry. The pipeline runs `FINERACT_DONE -> ERP_PENDING -> COMPLETED` for them (`services/pipeline.py`). The journal entry comes from Part H's mapping (D-021), applied to the Fineract transaction the operation created.
+
+**The entry is saved before the ERP is called (rule 8).** `journal_entry_for` runs when Fineract's outcome is known. The resulting request is written to `operations.erp_request` in the same transaction that sets `FINERACT_DONE`. Every attempt, inline or from recovery, sends those saved bytes. So:
+- a resend is byte-identical, and the ERP answers it 200 with the stored entry, never 409;
+- the ERP step does not need Fineract to be up;
+- the numbers are Fineract's numbers at the moment of execution (rule 5).
+
+**Look up before resending (rule 4).** After an ERP timeout, and on every recovery pass, the pipeline first reads `GET /api/journal-entries/{external_reference}`. If the entry is there, it is used. If the entry found differs from `erp_request`, the operation goes to `NEEDS_RECONCILIATION`, never overwritten. A plain "connection refused" is resent without a lookup, because nothing reached the ERP. The ERP's unique reference (D-020) is the guard behind both.
+
+| ERP answer | What the pipeline does |
+|---|---|
+| 201 / 200 with the same entry | `COMPLETED`, `erp_transaction_id` saved and returned |
+| Connection refused, 502, 503 | Resend inline (3 attempts, 0.5 s then 1 s), then defer with backoff |
+| Read timeout, other 5xx | Look up, then as above |
+| 409, 422 | `NEEDS_RECONCILIATION` |
+| Entry found with different lines | `NEEDS_RECONCILIATION` |
+
+**The ERP step never goes to `FAILED`.** Once Fineract has moved the money, a missing journal entry means the ledgers disagree. That needs a person, not a "failed" answer to the partner, who would retry with a new reference. The same applies when the mapping refuses a transaction (`FINERACT_DONE -> NEEDS_RECONCILIATION`). The caller gets 202 with the operation status, Fineract's split and the error.
+
+**Retry budget.** `attempts` restarts at 0 when an operation enters `ERP_PENDING`, so the ERP gets the full `operation_max_attempts` (10) whatever Fineract used. Deferred retries use the shared backoff (5 s doubling to 5 min, plus jitter, D-014). After the last one: `NEEDS_RECONCILIATION`.
+
+**Responses.** While the entry is pending: 202, `operation_status: ERP_PENDING` and Fineract's split. When done: 201 (200 on replay) with `erp_transaction_id` (the ERP's `JE-000123`, D-020). Fineract ids are still never returned.
+
+**The ERP returns an id.** `JournalEntryOut` gains `id` (`JE-` plus the zero-padded row id), so the integration service has something to store as `erp_transaction_id`.
+
+**Schema.** `operations.erp_request` is a new JSONB column. Tables come from `create_all`, which does not add columns to an existing table: a stack created before this change needs `make reset` (or `ALTER TABLE operations ADD COLUMN erp_request JSONB`). The stack starts empty (rule 13), so a fresh one is always right.
+
+**Evidence.** `make simulate-loan-lifecycle` (S-D1) now checks the ERP entry for the disbursement and every repayment against Fineract's own transaction, that the nine rejected disbursements have no entry, and that the ERP balances of 1100, 1200 and 4100 moved by exactly Fineract's amounts. The failure scenarios (ERP down, timeouts, crash) belong to Part J.
+
+**Known weaknesses.**
+- `NEEDS_RECONCILIATION` has no way out yet. Re-queueing or fixing an operation by hand belongs to reconciliation work.
+- `erp_request` is a snapshot. If Fineract later reprocesses the loan and changes the split, the ERP entry stays as posted (D-021, reversals).
+- The ERP lookup compares the whole request, description included. Changing the description format would make old pending entries look different; with immutable entries that is the safe direction.

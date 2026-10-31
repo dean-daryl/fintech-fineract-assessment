@@ -50,6 +50,7 @@ class Operation(Base):
     last_error: Mapped[str | None] = mapped_column(Text)
     fineract_resource_id: Mapped[int | None] = mapped_column(BigInteger)
     erp_transaction_id: Mapped[str | None] = mapped_column(String(100))
+    erp_request: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     response_code: Mapped[int | None] = mapped_column(Integer)
     response: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     fineract_password: str
     fineract_tls_verify: bool = True
     fineract_timeout_seconds: float = 10.0
+    erp_timeout_seconds: float = 10.0
 
     tenant_currency: str = "RWF"
     tenant_timezone: str = "Africa/Kigali"

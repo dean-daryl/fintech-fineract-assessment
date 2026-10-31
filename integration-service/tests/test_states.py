@@ -6,6 +6,7 @@ from app.domain.states import (
     OperationStatus,
     OperationType,
     check_transition,
+    has_erp_step,
     is_finished,
 )
 
@@ -60,3 +61,23 @@ def test_gl_sync_operation_completes_without_erp_step() -> None:
     check_transition(OperationType.SYNC_GL_ACCOUNTS, S.FINERACT_DONE, S.COMPLETED)
     with pytest.raises(InvalidTransitionError):
         check_transition(OperationType.SYNC_GL_ACCOUNTS, S.FINERACT_DONE, S.ERP_PENDING)
+
+
+@pytest.mark.parametrize("operation_type", [OperationType.DISBURSE_LOAN, OperationType.REPAY_LOAN])
+def test_money_movements_must_go_through_the_erp_step(operation_type: OperationType) -> None:
+    assert has_erp_step(operation_type)
+    check_transition(operation_type, S.FINERACT_DONE, S.ERP_PENDING)
+    check_transition(operation_type, S.FINERACT_DONE, S.NEEDS_RECONCILIATION)
+    check_transition(operation_type, S.ERP_PENDING, S.COMPLETED)
+    check_transition(operation_type, S.ERP_PENDING, S.NEEDS_RECONCILIATION)
+    with pytest.raises(InvalidTransitionError):
+        check_transition(operation_type, S.FINERACT_DONE, S.COMPLETED)
+    with pytest.raises(InvalidTransitionError):
+        check_transition(operation_type, S.ERP_PENDING, S.FAILED)
+
+
+@pytest.mark.parametrize("operation_type", [OperationType.CREATE_CLIENT, OperationType.CREATE_LOAN, OperationType.APPROVE_LOAN])
+def test_operations_without_money_movement_cannot_need_an_erp_entry(operation_type: OperationType) -> None:
+    assert not has_erp_step(operation_type)
+    with pytest.raises(InvalidTransitionError):
+        check_transition(operation_type, S.FINERACT_DONE, S.NEEDS_RECONCILIATION)

@@ -38,7 +38,7 @@ class FakeGLSyncService:
 
 def _submit(service: FakeGLSyncService, store: FakeStore, reference: str) -> tuple[int, dict[str, Any]]:
     settings = Settings(database_url="x", erp_base_url="x", fineract_base_url="x", fineract_username="x", fineract_password="x")
-    pipeline = OperationPipeline(store, settings)  # type: ignore[arg-type]
+    pipeline = OperationPipeline(store, None, settings)  # type: ignore[arg-type]
     result = pipeline.submit(GLAccountsSync(service), reference, {})  # type: ignore[arg-type]
     return result.status_code, result.body
 

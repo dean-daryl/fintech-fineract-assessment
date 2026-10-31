@@ -68,6 +68,23 @@ Every scenario is re-runnable against a running stack (`make up`). Logs are in `
 - **Actual:** 18/18 PASS on the development stack. To be captured in `evidence/verify-fineract-setup.log` on a fresh stack.
 - **Known gap (reported, not counted):** `PUT /currencies` is not authorized by Fineract 1.16.1, so the probe gets past security (404 for an unknown code). See DECISIONS.md D-013.
 
+## Loan lifecycle evidence at a glance
+
+| What the brief asks | Command | Evidence |
+|---|---|---|
+| Loan from application to payoff, idempotent, one disbursement | `make simulate-loan-lifecycle` | `evidence/simulate-loan-lifecycle.log` (41/41 checks PASS) |
+| One ERP journal entry per Fineract transaction, with Fineract's split | same | same, sections 4 to 9 |
+
+## S-D1: Loan lifecycle with ERP posting
+
+- **Initial state:** stack from `make reset`, then `make bootstrap`; the ERP has its 9 seeded accounts. Every run uses new references and checks balance movements rather than absolute balances, so it can be re-run. The logged run is the second on that stack, so its ERP ids start at `JE-000006`.
+- **Request:** onboard a client; apply, repeat, and reuse the reference with another principal; approve; 10 parallel disbursements with different references; repayment 1 sent 4 times; repayments 2 and 3; a payoff of Fineract's `totalOutstanding` (plus a reused reference and an overpayment, both refused).
+- **Expected:** one 201 and nine 409 for the disbursement; 201 then 200 ×3 for the repeated repayment; loan "Closed (obligations met)". In the ERP: one entry per disbursement and repayment, with lines equal to Fineract's transaction (Dr 1200 / Cr 1100; Dr 1100 / Cr 1200 principal / Cr 4100 interest), none for the rejected disbursements, and balances moved by exactly Fineract's amounts.
+- **Actual:** 41/41 checks PASS. Example from the log: repayment 1 of 500,000 RWF split by Fineract into 383,400 principal and 116,600 interest, posted as `JE-000007` with exactly those lines. Over the loan, 1100 moved by +500,799, 1200 by 0 and 4100 by +500,799: the interest Fineract charged.
+- **Fineract state:** one disbursement and four repayments, each with our `external_reference` as `externalId`.
+- **ERP state:** five entries, keyed by the same references. **Integration state:** every money operation `COMPLETED` with an `erp_transaction_id`.
+- **Explanation:** the journal entry is built from Fineract's transaction and saved before the ERP call (D-022), so repeats post nothing new. The ERP's unique reference is the guard behind that.
+
 ## Part G evidence at a glance
 
 | What the brief asks | Command | Evidence |
